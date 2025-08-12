@@ -1,0 +1,49 @@
+# Development Environment Override
+# Updated for Single RDS Usage
+version: "3.8"
+
+services:
+  # Development specific configurations
+  eureka-server:
+    environment:
+      SPRING_PROFILES_ACTIVE: docker,dev
+    env_file:
+      - ../env/dev/eureka-server.env
+
+  api-gateway:
+    environment:
+      SPRING_PROFILES_ACTIVE: docker,dev
+    env_file:
+      - ../env/dev/gateway.env
+
+  # Single Database with development settings
+  eatcloud-db:
+    env_file:
+      - ../env/dev/eatcloud-db.env
+    volumes:
+      # Add all schema and data initialization scripts
+      - ../../../user-service/src/main/resources/db/schema.sql:/docker-entrypoint-initdb.d/10-user-schema.sql:ro
+      - ../../../user-service/src/main/resources/db/data.sql:/docker-entrypoint-initdb.d/11-user-data.sql:ro
+      - ../../../store-service/src/main/resources/db/schema.sql:/docker-entrypoint-initdb.d/20-store-schema.sql:ro
+      - ../../../store-service/src/main/resources/db/data.sql:/docker-entrypoint-initdb.d/21-store-data.sql:ro
+      - ../../../order-service/src/main/resources/db/schema.sql:/docker-entrypoint-initdb.d/30-order-schema.sql:ro
+      - ../../../order-service/src/main/resources/db/data.sql:/docker-entrypoint-initdb.d/31-order-data.sql:ro
+      - ../../../payment-service/src/main/resources/db/schema.sql:/docker-entrypoint-initdb.d/40-payment-schema.sql:ro
+      - ../../../payment-service/src/main/resources/db/data.sql:/docker-entrypoint-initdb.d/41-payment-data.sql:ro
+
+  # Uncomment services when ready to use
+#  user-service:
+#    env_file:
+#      - ../env/dev/user-service.env
+
+#  store-service:
+#    env_file:
+#      - ../env/dev/store-service.env
+
+#  order-service:
+#    env_file:
+#      - ../env/dev/order-service.env
+
+#  payment-service:
+#    env_file:
+#      - ../env/dev/payment-service.env

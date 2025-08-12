@@ -1,0 +1,4 @@
+rootProject.name = 'profect-eatcloud-msa-v1'
+
+include 'eureka-server'
+include 'api-gateway'

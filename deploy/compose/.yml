@@ -1,0 +1,206 @@
+# Base Docker Compose Configuration
+# Updated for Single RDS Usage
+version: "3.8"
+
+x-common-config: &common-config
+  user: "1000:1000"
+  read_only: true
+  tmpfs:
+    - /tmp
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  networks:
+    - eatcloud-network
+
+x-service-config: &service-config
+  <<: *common-config
+  deploy:
+    resources:
+      limits:
+        cpus: "0.75"
+        memory: 768M
+
+services:
+  # Infrastructure Services
+  eureka-server:
+    <<: *common-config
+    build:
+      context: ../../
+      dockerfile: eureka-server/Dockerfile
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8761/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 512M
+
+  api-gateway:
+    <<: *common-config
+    build:
+      context: ../../
+      dockerfile: api-gateway/Dockerfile
+    container_name: api-gateway
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 512M
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: eatcloud-redis
+    volumes:
+      - redis-data:/data
+    networks:
+      - eatcloud-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+
+  # Single RDS Database (for local development/testing)
+  # In production, this will be replaced with actual AWS RDS
+  eatcloud-db:
+    image: postgis/postgis:17-3.4
+    container_name: eatcloud-db
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: ${DB_NAME:-eatcloud_db}
+      POSTGRES_USER: ${DB_USER:-eatcloud_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-devpassword123}
+      # Enable multiple databases creation
+      POSTGRES_MULTIPLE_DATABASES: user_db,store_db,order_db,payment_db
+    volumes:
+      - eatcloud_db_data:/var/lib/postgresql/data
+      - ./scripts/create-multiple-databases.sh:/docker-entrypoint-initdb.d/00-create-multiple-databases.sh:ro
+    networks:
+      - eatcloud-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-eatcloud_user} -d ${DB_NAME:-eatcloud_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1024M
+
+  # Microservices (commented out - uncomment when ready to use)
+  # All services will connect to the single eatcloud-db instance
+  
+#  user-service:
+#    <<: *service-config
+#    build:
+#      context: ../../
+#      dockerfile: user-service/Dockerfile
+#    container_name: user-service
+#    environment:
+#      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+#      DB_HOST: eatcloud-db
+#      DB_PORT: 5432
+#      DB_NAME: user_db
+#      DB_USER: ${DB_USER:-eatcloud_user}
+#      DB_PASSWORD: ${DB_PASSWORD:-devpassword123}
+#      REDIS_HOST: redis
+#      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka
+#    depends_on:
+#      eatcloud-db:
+#        condition: service_healthy
+#      eureka-server:
+#        condition: service_healthy
+
+#  store-service:
+#    <<: *service-config
+#    build:
+#      context: ../../
+#      dockerfile: store-service/Dockerfile
+#    container_name: store-service
+#    environment:
+#      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+#      DB_HOST: eatcloud-db
+#      DB_PORT: 5432
+#      DB_NAME: store_db
+#      DB_USER: ${DB_USER:-eatcloud_user}
+#      DB_PASSWORD: ${DB_PASSWORD:-devpassword123}
+#      REDIS_HOST: redis
+#      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka
+#    depends_on:
+#      eatcloud-db:
+#        condition: service_healthy
+#      eureka-server:
+#        condition: service_healthy
+
+#  order-service:
+#    <<: *service-config
+#    build:
+#      context: ../../
+#      dockerfile: order-service/Dockerfile
+#    container_name: order-service
+#    environment:
+#      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+#      DB_HOST: eatcloud-db
+#      DB_PORT: 5432
+#      DB_NAME: order_db
+#      DB_USER: ${DB_USER:-eatcloud_user}
+#      DB_PASSWORD: ${DB_PASSWORD:-devpassword123}
+#      REDIS_HOST: redis
+#      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka
+#    depends_on:
+#      eatcloud-db:
+#        condition: service_healthy
+#      eureka-server:
+#        condition: service_healthy
+
+#  payment-service:
+#    <<: *service-config
+#    build:
+#      context: ../../
+#      dockerfile: payment-service/Dockerfile
+#    container_name: payment-service
+#    environment:
+#      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+#      DB_HOST: eatcloud-db
+#      DB_PORT: 5432
+#      DB_NAME: payment_db
+#      DB_USER: ${DB_USER:-eatcloud_user}
+#      DB_PASSWORD: ${DB_PASSWORD:-devpassword123}
+#      REDIS_HOST: redis
+#      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka
+#    depends_on:
+#      eatcloud-db:
+#        condition: service_healthy
+#      eureka-server:
+#        condition: service_healthy
+
+networks:
+  eatcloud-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  eatcloud_db_data:
