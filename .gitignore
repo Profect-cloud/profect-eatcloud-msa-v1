@@ -50,6 +50,9 @@ docker-compose.override.yml
 .env.local
 .env.*.local
 deploy/env/prod/.env.local
+*.env
+.env*
+deploy/env/**/*.env
 
 # 임시 파일들
 *.tmp
