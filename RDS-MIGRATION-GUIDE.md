@@ -13,7 +13,7 @@
   - payment-db (결제 관리)
 
 - **현재**: 단일 PostgreSQL 인스턴스 내 여러 데이터베이스
-  - eatcloud-db 컨테이너 내에 user_db, store_db, order_db, payment_db 스키마
+  - eatcloud-db 컨테이너 내에 auth_db, customer_db, admin_db, owner_db, store_db, order_db, payment_db 스키마
 
 ### 2. 환경 설정 변경
 
@@ -39,7 +39,7 @@ docker-compose -f deploy/compose/.yml -f deploy/compose/prod/.yml up
 - **포트**: 5432
 - **사용자**: eatcloud_user
 - **비밀번호**: devpassword123
-- **데이터베이스들**: user_db, store_db, order_db, payment_db
+- **데이터베이스들**: auth_db, customer_db, admin_db, owner_db, store_db, order_db, payment_db
 
 #### 프로덕션 환경 (AWS RDS)
 - **호스트**: your-rds-instance.region.rds.amazonaws.com
@@ -73,13 +73,19 @@ RDS 인스턴스에 연결 후 다음 스키마들을 생성:
 
 ```sql
 -- 각 서비스별 데이터베이스 생성
-CREATE DATABASE user_db;
+CREATE DATABASE auth_db;
+CREATE DATABASE customer_db;
+CREATE DATABASE admin_db;
+CREATE DATABASE owner_db;
 CREATE DATABASE store_db;
 CREATE DATABASE order_db;
 CREATE DATABASE payment_db;
 
 -- 권한 부여
-GRANT ALL PRIVILEGES ON DATABASE user_db TO eatcloud_admin;
+GRANT ALL PRIVILEGES ON DATABASE auth_db TO eatcloud_admin;
+GRANT ALL PRIVILEGES ON DATABASE customer_db TO eatcloud_admin;
+GRANT ALL PRIVILEGES ON DATABASE admin_db TO eatcloud_admin;
+GRANT ALL PRIVILEGES ON DATABASE owner_db TO eatcloud_admin;
 GRANT ALL PRIVILEGES ON DATABASE store_db TO eatcloud_admin;
 GRANT ALL PRIVILEGES ON DATABASE order_db TO eatcloud_admin;
 GRANT ALL PRIVILEGES ON DATABASE payment_db TO eatcloud_admin;
@@ -89,7 +95,10 @@ GRANT ALL PRIVILEGES ON DATABASE payment_db TO eatcloud_admin;
 프로덕션 환경 변수 파일들을 실제 RDS 정보로 업데이트:
 
 - `deploy/env/prod/eatcloud-rds.env`
-- `deploy/env/prod/user-service.env`
+- `deploy/env/prod/auth-service.env`
+- `deploy/env/prod/customer-service.env`
+- `deploy/env/prod/admin-service.env`
+- `deploy/env/prod/owner-service.env`
 - `deploy/env/prod/store-service.env`
 - `deploy/env/prod/order-service.env`
 - `deploy/env/prod/payment-service.env`
@@ -116,10 +125,13 @@ GRANT ALL PRIVILEGES ON DATABASE payment_db TO eatcloud_admin;
 
 | 서비스 | 데이터베이스 | 포트 |
 |--------|--------------|------|
-| user-service | user_db | 8081 |
-| store-service | store_db | 8082 |
-| order-service | order_db | 8083 |
-| payment-service | payment_db | 8084 |
+| auth-service | auth_db | 8081 |
+| customer-service | customer_db | 8082 |
+| admin-service | admin_db | 8083 |
+| owner-service | owner_db | 8084 |
+| store-service | store_db | 8085 |
+| order-service | order_db | 8086 |
+| payment-service | payment_db | 8087 |
 
 ## 모니터링 및 유지보수
 

@@ -1,5 +1,5 @@
 # Production Environment Override
-# Updated for Single RDS Usage
+# Updated for New Service Structure: auth, customer, admin, manager, store, order, payment
 version: "3.8"
 
 services:
@@ -24,17 +24,29 @@ services:
       replicas: 0
 
   # Uncomment and configure services for production
-#  user-service:
+#  auth-service:
 #    env_file:
-#      - ../env/prod/user-service.env
+#      - ../env/prod/auth-service.env
+
+#  customer-service:
+#    env_file:
+#      - ../env/prod/customer-service.env
+
+#  admin-service:
+#    env_file:
+#      - ../env/prod/admin-service.env
+
+#  manager-service:
+#    env_file:
+#      - ../env/prod/manager-service.env
 
 #  store-service:
 #    env_file:
 #      - ../env/prod/store-service.env
 
-#  order-service:
-#    env_file:
-#      - ../env/prod/order-service.env
+  order-service:
+    env_file:
+      - ../env/prod/order-service.env
 
 #  payment-service:
 #    env_file:
