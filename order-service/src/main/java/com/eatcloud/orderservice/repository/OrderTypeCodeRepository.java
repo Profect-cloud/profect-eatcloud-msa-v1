@@ -8,6 +8,6 @@ import com.eatcloud.orderservice.common.BaseTimeRepository;
 import java.util.Optional;
 
 @Repository
-public interface OrderTypeCodeRepository extends JpaRepository<OrderTypeCode, String>, BaseTimeRepository<OrderTypeCode, String> {
+public interface OrderTypeCodeRepository extends  BaseTimeRepository<OrderTypeCode, String> {
     Optional<OrderTypeCode> findByCode(String code);
 }

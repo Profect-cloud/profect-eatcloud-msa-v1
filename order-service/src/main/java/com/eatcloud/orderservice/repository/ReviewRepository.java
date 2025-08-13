@@ -14,7 +14,7 @@ import java.util.UUID;
 
 
 @Repository
-public interface ReviewRepository extends JpaRepository<Review, UUID>, BaseTimeRepository<Review, UUID> {
+public interface ReviewRepository extends BaseTimeRepository<Review, UUID> {
 
 	boolean existsByOrderOrderIdAndTimeData_DeletedAtIsNull(UUID orderId);
 

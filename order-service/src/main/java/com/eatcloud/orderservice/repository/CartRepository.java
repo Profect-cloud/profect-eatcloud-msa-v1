@@ -13,7 +13,7 @@ import java.util.UUID;
 
 
 @Repository
-public interface CartRepository extends JpaRepository<Cart, UUID>, BaseTimeRepository<Cart, UUID> {
+public interface CartRepository extends BaseTimeRepository<Cart, UUID> {
     Optional<Cart> findByCustomerId(UUID customerId);
     void deleteByCustomerId(UUID customerId);
 

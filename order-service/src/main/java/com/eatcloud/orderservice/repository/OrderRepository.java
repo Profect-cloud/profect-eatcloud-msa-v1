@@ -12,7 +12,7 @@ import com.eatcloud.orderservice.entity.Order;
 import com.eatcloud.orderservice.common.BaseTimeRepository;
 
 @Repository
-public interface OrderRepository extends JpaRepository<Order, UUID>, BaseTimeRepository<Order, UUID> {
+public interface OrderRepository extends BaseTimeRepository<Order, UUID> {
     @Query("SELECT o FROM Order o WHERE o.orderNumber = :orderNumber")
     Optional<Order> findByOrderNumber(@Param("orderNumber") String orderNumber);
 
