@@ -58,9 +58,9 @@ services:
 #    env_file:
 #      - ../env/dev/store-service.env
 
-  order-service:
-    env_file:
-      - ../env/dev/order-service.env
+#  order-service:
+#    env_file:
+#      - ../env/dev/order-service.env
 
 #  payment-service:
 #    env_file:

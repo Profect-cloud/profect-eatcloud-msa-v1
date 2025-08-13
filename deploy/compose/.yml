@@ -229,28 +229,28 @@ services:
 #      eureka-server:
 #        condition: service_healthy
 
-  order-service:
-    <<: *service-config
-    build:
-      context: ../../
-      dockerfile: order-service/Dockerfile
-    container_name: order-service
-    ports:
-      - "8086:8080"
-    environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
-      DB_HOST: eatcloud-db
-      DB_PORT: 5432
-      DB_NAME: order_db
-      DB_USER: ${DB_USER:-eatcloud_user}
-      DB_PASSWORD: ${DB_PASSWORD:-devpassword123}
-      REDIS_HOST: redis
-      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka
-    depends_on:
-      eatcloud-db:
-        condition: service_healthy
-      eureka-server:
-        condition: service_healthy
+#  order-service:
+#    <<: *service-config
+#    build:
+#      context: ../../
+#      dockerfile: order-service/Dockerfile
+#    container_name: order-service
+#    ports:
+#      - "8086:8080"
+#    environment:
+#      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+#      DB_HOST: eatcloud-db
+#      DB_PORT: 5432
+#      DB_NAME: order_db
+#      DB_USER: ${DB_USER:-eatcloud_user}
+#      DB_PASSWORD: ${DB_PASSWORD:-devpassword123}
+#      REDIS_HOST: redis
+#      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka
+#    depends_on:
+#      eatcloud-db:
+#        condition: service_healthy
+#      eureka-server:
+#        condition: service_healthy
 
 #  payment-service:
 #    <<: *service-config
