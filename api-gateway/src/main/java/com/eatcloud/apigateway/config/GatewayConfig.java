@@ -15,71 +15,115 @@ public class GatewayConfig {
 		log.info("🚀 Configuring Gateway Routes...");
 
 		return builder.routes()
+			// Auth Service Routes
 			.route("auth-service", r -> r
 				.path("/api/v1/auth/**")
 				.filters(f -> f
-					// 인증 경로는 user-service 컨트롤러 매핑(`/api/v1/auth/**`)과 일치시키기 위해 prefix 제거 안 함
 					.addRequestHeader("X-Service-Name", "auth-service"))
-				.uri("lb://user-service"))
+				.uri("lb://auth-service"))
 
-			.route("user-service", r -> r
-				.path("/api/v1/customers/**", "/api/v1/manager/**", "/api/v1/admin/**")
+			// Customer Service Routes
+			.route("customer-service", r -> r
+				.path("/api/v1/customers/**")
 				.filters(f -> f
 					.stripPrefix(2)
-					.addRequestHeader("X-Service-Name", "user-service"))
-				.uri("lb://user-service"))
+					.addRequestHeader("X-Service-Name", "customer-service"))
+				.uri("lb://customer-service"))
 
-            // User Service Swagger UI - forwarding with forwarded prefix for springdoc
-            .route("user-service-swagger", r -> r
-                .path("/user-service/**")
-                .filters(f -> f
-                    .rewritePath("/user-service/(?<segment>.*)", "/${segment}")
-                    .addRequestHeader("X-Forwarded-Prefix", "/user-service")
-                    .addRequestHeader("X-Service-Name", "user-service"))
-                .uri("lb://user-service"))
-
-			// Order Service Swagger UI - Simple forwarding
-			.route("order-service-swagger", r -> r
-				.path("/order-service/**")
+			// Admin Service Routes
+			.route("admin-service", r -> r
+				.path("/api/v1/admin/**")
 				.filters(f -> f
-					.rewritePath("/order-service/(?<segment>.*)", "/${segment}")
+					.stripPrefix(2)
+					.addRequestHeader("X-Service-Name", "admin-service"))
+				.uri("lb://admin-service"))
+
+			// Manager Service Routes
+			.route("manager-service", r -> r
+				.path("/api/v1/manager/**")
+				.filters(f -> f
+					.stripPrefix(2)
+					.addRequestHeader("X-Service-Name", "manager-service"))
+				.uri("lb://manager-service"))
+
+			// Store Service Routes
+			.route("store-service", r -> r
+				.path("/api/v1/stores/**")
+				.filters(f -> f
+					.stripPrefix(2)
+					.addRequestHeader("X-Service-Name", "store-service"))
+				.uri("lb://store-service"))
+
+			// Order Service Routes
+			.route("order-service", r -> r
+				.path("/api/v1/orders/**")
+				.filters(f -> f
+					.stripPrefix(2)
 					.addRequestHeader("X-Service-Name", "order-service"))
 				.uri("lb://order-service"))
 
-			// Store Service Swagger UI - Simple forwarding
+			// Payment Service Routes
+			.route("payment-service", r -> r
+				.path("/api/v1/payments/**")
+				.filters(f -> f
+					.stripPrefix(2)
+					.addRequestHeader("X-Service-Name", "payment-service"))
+				.uri("lb://payment-service"))
+
+			// Swagger UI Routes for each service
+			.route("auth-service-swagger", r -> r
+				.path("/auth-service/**")
+				.filters(f -> f
+					.rewritePath("/auth-service/(?<segment>.*)", "/${segment}")
+					.addRequestHeader("X-Forwarded-Prefix", "/auth-service")
+					.addRequestHeader("X-Service-Name", "auth-service"))
+				.uri("lb://auth-service"))
+
+			.route("customer-service-swagger", r -> r
+				.path("/customer-service/**")
+				.filters(f -> f
+					.rewritePath("/customer-service/(?<segment>.*)", "/${segment}")
+					.addRequestHeader("X-Forwarded-Prefix", "/customer-service")
+					.addRequestHeader("X-Service-Name", "customer-service"))
+				.uri("lb://customer-service"))
+
+			.route("admin-service-swagger", r -> r
+				.path("/admin-service/**")
+				.filters(f -> f
+					.rewritePath("/admin-service/(?<segment>.*)", "/${segment}")
+					.addRequestHeader("X-Forwarded-Prefix", "/admin-service")
+					.addRequestHeader("X-Service-Name", "admin-service"))
+				.uri("lb://admin-service"))
+
+			.route("manager-service-swagger", r -> r
+				.path("/manager-service/**")
+				.filters(f -> f
+					.rewritePath("/manager-service/(?<segment>.*)", "/${segment}")
+					.addRequestHeader("X-Forwarded-Prefix", "/manager-service")
+					.addRequestHeader("X-Service-Name", "manager-service"))
+				.uri("lb://manager-service"))
+
 			.route("store-service-swagger", r -> r
 				.path("/store-service/**")
 				.filters(f -> f
 					.rewritePath("/store-service/(?<segment>.*)", "/${segment}")
+					.addRequestHeader("X-Forwarded-Prefix", "/store-service")
 					.addRequestHeader("X-Service-Name", "store-service"))
 				.uri("lb://store-service"))
 
-			// Payment Service Swagger UI - Simple forwarding
+			.route("order-service-swagger", r -> r
+				.path("/order-service/**")
+				.filters(f -> f
+					.rewritePath("/order-service/(?<segment>.*)", "/${segment}")
+					.addRequestHeader("X-Forwarded-Prefix", "/order-service")
+					.addRequestHeader("X-Service-Name", "order-service"))
+				.uri("lb://order-service"))
+
 			.route("payment-service-swagger", r -> r
 				.path("/payment-service/**")
 				.filters(f -> f
 					.rewritePath("/payment-service/(?<segment>.*)", "/${segment}")
-					.addRequestHeader("X-Service-Name", "payment-service"))
-				.uri("lb://payment-service"))
-
-			.route("order-service", r -> r
-				.path("/api/orders/**")
-				.filters(f -> f
-					.stripPrefix(1)
-					.addRequestHeader("X-Service-Name", "order-service"))
-				.uri("lb://order-service"))
-
-			.route("store-service", r -> r
-				.path("/api/stores/**")
-				.filters(f -> f
-					.stripPrefix(1)
-					.addRequestHeader("X-Service-Name", "store-service"))
-				.uri("lb://store-service"))
-
-			.route("payment-service", r -> r
-				.path("/api/payments/**")
-				.filters(f -> f
-					.stripPrefix(1)
+					.addRequestHeader("X-Forwarded-Prefix", "/payment-service")
 					.addRequestHeader("X-Service-Name", "payment-service"))
 				.uri("lb://payment-service"))
 
