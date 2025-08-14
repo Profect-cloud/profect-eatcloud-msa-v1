@@ -137,13 +137,27 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: " + orderId));
 
+        // 이미 PAID 상태면 중복 처리 방지 (멱등성 보장)
+        if ("PAID".equals(order.getOrderStatusCode().getCode())) {
+            log.warn("주문이 이미 결제 완료 상태입니다: orderId={}, paymentId={}", orderId, paymentId);
+            return;
+        }
+
+        // PENDING 상태가 아니면 결제 완료 불가
+        if (!"PENDING".equals(order.getOrderStatusCode().getCode())) {
+            log.error("결제 완료할 수 없는 주문 상태: orderId={}, currentStatus={}", 
+                     orderId, order.getOrderStatusCode().getCode());
+            throw new RuntimeException("결제 완료할 수 없는 주문 상태입니다: " + order.getOrderStatusCode().getCode());
+        }
+
         OrderStatusCode paidStatus = orderStatusCodeRepository.findByCode("PAID")
                 .orElseThrow(() -> new RuntimeException("주문 상태 코드를 찾을 수 없습니다: PAID"));
 
         order.setPaymentId(paymentId);
         order.setOrderStatusCode(paidStatus);
-
         orderRepository.save(order);
+
+        log.info("주문 결제 완료 처리: orderId={}, paymentId={}", orderId, paymentId);
 
         try {
             externalApiService.invalidateCart(order.getCustomerId());
@@ -153,6 +167,26 @@ public class OrderService {
             log.error("Failed to invalidate cart after payment completion for customer: {}, order: {}",
                     order.getCustomerId(), order.getOrderNumber(), e);
         }
+    }
+
+    public void failPayment(UUID orderId, String failureReason) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: " + orderId));
+
+        // PENDING 상태가 아니면 결제 실패 처리 불가
+        if (!"PENDING".equals(order.getOrderStatusCode().getCode())) {
+            log.warn("결제 실패 처리할 수 없는 주문 상태: orderId={}, currentStatus={}", 
+                    orderId, order.getOrderStatusCode().getCode());
+            return;
+        }
+
+        OrderStatusCode failedStatus = orderStatusCodeRepository.findByCode("PAYMENT_FAILED")
+                .orElseThrow(() -> new RuntimeException("주문 상태 코드를 찾을 수 없습니다: PAYMENT_FAILED"));
+
+        order.setOrderStatusCode(failedStatus);
+        orderRepository.save(order);
+
+        log.info("주문 결제 실패 처리: orderId={}, reason={}", orderId, failureReason);
     }
 
     public void cancelOrder(UUID orderId) {

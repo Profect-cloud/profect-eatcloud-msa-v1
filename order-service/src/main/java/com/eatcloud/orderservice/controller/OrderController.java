@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.eatcloud.orderservice.dto.request.OrderStatusUpdateRequest;
 import com.eatcloud.orderservice.dto.request.CreateOrderRequest;
+import com.eatcloud.orderservice.dto.request.PaymentCompleteRequest;
+import com.eatcloud.orderservice.dto.request.PaymentFailedRequest;
 import com.eatcloud.orderservice.dto.response.CreateOrderResponse;
 import com.eatcloud.orderservice.dto.response.ApiResponse;
 import com.eatcloud.orderservice.entity.Order;
@@ -177,5 +179,104 @@ public class OrderController {
 		
 		orderService.updateOrderStatus(orderId, request.getStatusCode());
 		return ResponseEntity.noContent().build();
+	}
+
+	// ===== Payment Service 콜백 엔드포인트들 =====
+
+	@PostMapping("/{orderId}/payment/complete")
+	public ResponseEntity<Map<String, Object>> completePayment(
+			@PathVariable UUID orderId,
+			@RequestBody @Valid PaymentCompleteRequest request,
+			@RequestHeader(value = "X-Service-Name", required = false) String serviceName) {
+		
+		Map<String, Object> response = new HashMap<>();
+		
+		try {
+			// Payment Service에서만 호출 허용
+			if (!"payment-service".equals(serviceName)) {
+				log.warn("Unauthorized payment completion attempt from: {}", serviceName);
+				response.put("error", "Unauthorized service");
+				return ResponseEntity.status(403).body(response);
+			}
+			
+			log.info("결제 완료 콜백 수신: orderId={}, paymentId={}", orderId, request.getPaymentId());
+			
+			orderService.completePayment(orderId, request.getPaymentId());
+			
+			response.put("message", "주문 결제 완료 처리되었습니다");
+			response.put("orderId", orderId);
+			response.put("paymentId", request.getPaymentId());
+			
+			return ResponseEntity.ok(response);
+			
+		} catch (Exception e) {
+			log.error("결제 완료 처리 중 오류: orderId={}, paymentId={}", orderId, request.getPaymentId(), e);
+			response.put("error", "결제 완료 처리 중 오류가 발생했습니다: " + e.getMessage());
+			return ResponseEntity.internalServerError().body(response);
+		}
+	}
+
+	@PostMapping("/{orderId}/payment/failed")
+	public ResponseEntity<Map<String, Object>> failPayment(
+			@PathVariable UUID orderId,
+			@RequestBody @Valid PaymentFailedRequest request,
+			@RequestHeader(value = "X-Service-Name", required = false) String serviceName) {
+		
+		Map<String, Object> response = new HashMap<>();
+		
+		try {
+			// Payment Service에서만 호출 허용
+			if (!"payment-service".equals(serviceName)) {
+				log.warn("Unauthorized payment failure attempt from: {}", serviceName);
+				response.put("error", "Unauthorized service");
+				return ResponseEntity.status(403).body(response);
+			}
+			
+			log.info("결제 실패 콜백 수신: orderId={}, reason={}", orderId, request.getFailureReason());
+			
+			orderService.failPayment(orderId, request.getFailureReason());
+			
+			response.put("message", "주문 결제 실패 처리되었습니다");
+			response.put("orderId", orderId);
+			response.put("failureReason", request.getFailureReason());
+			
+			return ResponseEntity.ok(response);
+			
+		} catch (Exception e) {
+			log.error("결제 실패 처리 중 오류: orderId={}, reason={}", orderId, request.getFailureReason(), e);
+			response.put("error", "결제 실패 처리 중 오류가 발생했습니다: " + e.getMessage());
+			return ResponseEntity.internalServerError().body(response);
+		}
+	}
+
+	@PostMapping("/{orderId}/payment/cancel")
+	public ResponseEntity<Map<String, Object>> cancelPayment(
+			@PathVariable UUID orderId,
+			@RequestHeader(value = "X-Service-Name", required = false) String serviceName) {
+		
+		Map<String, Object> response = new HashMap<>();
+		
+		try {
+			// Payment Service에서만 호출 허용
+			if (!"payment-service".equals(serviceName)) {
+				log.warn("Unauthorized payment cancellation attempt from: {}", serviceName);
+				response.put("error", "Unauthorized service");
+				return ResponseEntity.status(403).body(response);
+			}
+			
+			log.info("결제 취소 콜백 수신: orderId={}", orderId);
+			
+			orderService.cancelOrder(orderId);
+			
+			response.put("message", "주문이 취소되었습니다");
+			response.put("orderId", orderId);
+			
+			return ResponseEntity.ok(response);
+			
+		} catch (Exception e) {
+			log.error("결제 취소 처리 중 오류: orderId={}", orderId, e);
+			response.put("error", "결제 취소 처리 중 오류가 발생했습니다: " + e.getMessage());
+			return ResponseEntity.internalServerError().body(response);
+		}
 	}
 }
