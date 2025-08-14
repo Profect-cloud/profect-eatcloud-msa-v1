@@ -29,6 +29,10 @@ dependencies {
 	implementation("org.springframework.security:spring-security-core")
 
 	compileOnly("jakarta.persistence:jakarta.persistence-api")
+
+	api("org.springframework.boot:spring-boot-starter-web")
+	compileOnly("org.projectlombok:lombok")
+	annotationProcessor("org.projectlombok:lombok")
 }
 
 tasks.matching { it.name == "bootJar" }.configureEach { enabled = false }
