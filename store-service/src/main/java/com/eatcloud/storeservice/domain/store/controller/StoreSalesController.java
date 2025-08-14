@@ -1,5 +1,6 @@
 package com.eatcloud.storeservice.domain.store.controller;
 
+import com.eatcloud.storeservice.common.ApiResponse;
 import com.eatcloud.storeservice.domain.store.dto.DailySalesResponseDto;
 import com.eatcloud.storeservice.domain.store.dto.MenuSalesRankingResponseDto;
 import com.eatcloud.storeservice.domain.store.dto.SalesPeriodSummaryResponseDto;
@@ -33,7 +34,7 @@ public class StoreSalesController {
 
 	@Operation(summary = "일별 매출 조회", description = "특정 기간의 일별 매출 데이터를 조회합니다.")
 	@GetMapping("/{storeId}/daily")
-	public ResponseEntity<List<DailySalesResponseDto>> getDailySales(
+	public ApiResponse<List<DailySalesResponseDto>> getDailySales(
 		@PathVariable UUID storeId,
 		@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
 		@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
@@ -41,12 +42,12 @@ public class StoreSalesController {
 
 		UUID managerId = getManagerUuid(userDetails);
 		List<DailySalesResponseDto> salesData = storeSalesService.getDailySales(storeId, startDate, endDate, managerId);
-		return ResponseEntity.ok(salesData);
+		return ApiResponse.success(salesData);
 	}
 
 	@Operation(summary = "메뉴별 매출 순위", description = "특정 기간의 메뉴별 매출 순위를 조회합니다.")
 	@GetMapping("/{storeId}/menu-ranking")
-	public ResponseEntity<List<MenuSalesRankingResponseDto>> getMenuSalesRanking(
+	public ApiResponse<List<MenuSalesRankingResponseDto>> getMenuSalesRanking(
 		@PathVariable UUID storeId,
 		@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
 		@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
@@ -56,7 +57,7 @@ public class StoreSalesController {
 		UUID managerId = getManagerUuid(userDetails);
 		List<MenuSalesRankingResponseDto> ranking = storeSalesService.getMenuSalesRanking(storeId, startDate, endDate,
 			limit, managerId);
-		return ResponseEntity.ok(ranking);
+		return ApiResponse.success(ranking);
 	}
 
 	@Operation(summary = "기간별 매출 요약", description = "특정 기간의 매출 요약 정보를 조회합니다.")
