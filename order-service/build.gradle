@@ -34,15 +34,17 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+	implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+	implementation 'org.springframework.kafka:spring-kafka'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.cloud:spring-cloud-starter-loadbalancer'
 
 	runtimeOnly 'org.postgresql:postgresql'
-	
+
 	// Redis dependencies - Redisson으로 변경
 	// implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	// implementation 'org.apache.commons:commons-pool2' // Lettuce connection pool support
-	
+
 	// Redisson 추가 (분산락 및 분산 트랜잭션 지원)
 	implementation 'org.redisson:redisson-spring-boot-starter:3.24.3'
 

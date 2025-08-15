@@ -25,6 +25,6 @@ public interface OrderRepository extends BaseTimeRepository<Order, UUID> {
     List<Order> findAllByCustomerId(UUID customerId);
 
     List<Order> findAllByStoreId(UUID storeId);
-    
+
     Optional<Order> findByOrderIdAndStoreId(UUID orderId, UUID storeId);
 }

@@ -37,10 +37,10 @@ public class OrderService {
     private final ExternalApiService externalApiService;
     private final DistributedLockService distributedLockService;
     private final SagaOrchestrator sagaOrchestrator;
-    
+
     @Autowired
     private CartService cartService;
-    
+
     /**
      * 장바구니에서 주문 생성 - Saga 패턴 적용
      * 분산 트랜잭션으로 처리하여 일관성 보장
@@ -49,7 +49,7 @@ public class OrderService {
         // Saga 패턴을 통한 분산 트랜잭션 처리
         return sagaOrchestrator.createOrderSaga(customerId, request);
     }
-    
+
     /**
      * 레거시 메서드 - 단순 분산락만 사용하는 버전
      * (하위 호환성을 위해 유지)
@@ -65,13 +65,13 @@ public class OrderService {
                 TimeUnit.SECONDS,
                 () -> {
                     log.info("Starting order creation for customer: {}", customerId);
-                    
+
                     // 장바구니 조회
                     List<CartItem> cartItems = cartService.getCart(customerId);
                     if (cartItems.isEmpty()) {
                         throw new OrderException(ErrorCode.EMPTY_CART);
                     }
-                    
+
                     // 장바구니 아이템을 주문 메뉴로 변환
                     List<OrderMenu> orderMenuList = cartItems.stream()
                         .map(item -> OrderMenu.builder()
@@ -81,7 +81,7 @@ public class OrderService {
                             .price(item.getPrice())
                             .build())
                         .collect(Collectors.toList());
-                    
+
                     // 주문 생성
                     Order order = createPendingOrder(
                         customerId,
@@ -91,7 +91,7 @@ public class OrderService {
                         request.getUsePoints(),
                         request.getPointsToUse()
                     );
-                    
+
                     // 장바구니 비우기
                     try {
                         cartService.clearCart(customerId);
@@ -99,9 +99,9 @@ public class OrderService {
                     } catch (Exception e) {
                         log.error("Failed to clear cart for customer: {}, but order created successfully", customerId, e);
                     }
-                    
+
                     log.info("Order created successfully: orderId={}, customerId={}", order.getOrderId(), customerId);
-                    
+
                     return CreateOrderResponse.builder()
                         .orderId(order.getOrderId())
                         .orderNumber(order.getOrderNumber())
@@ -127,7 +127,7 @@ public class OrderService {
 
         OrderStatusCode statusCode = orderStatusCodeRepository.findByCode("PENDING")
                 .orElseThrow(() -> new RuntimeException("주문 상태 코드를 찾을 수 없습니다: PENDING"));
-        
+
         OrderTypeCode typeCode = orderTypeCodeRepository.findByCode(orderType)
                 .orElseThrow(() -> new RuntimeException("주문 타입 코드를 찾을 수 없습니다: " + orderType));
 
@@ -190,7 +190,7 @@ public class OrderService {
 
         // PENDING 상태가 아니면 결제 완료 불가
         if (!"PENDING".equals(order.getOrderStatusCode().getCode())) {
-            log.error("결제 완료할 수 없는 주문 상태: orderId={}, currentStatus={}", 
+            log.error("결제 완료할 수 없는 주문 상태: orderId={}, currentStatus={}",
                      orderId, order.getOrderStatusCode().getCode());
             throw new RuntimeException("결제 완료할 수 없는 주문 상태입니다: " + order.getOrderStatusCode().getCode());
         }
@@ -211,7 +211,7 @@ public class OrderService {
 
         // PENDING 상태가 아니면 결제 실패 처리 불가
         if (!"PENDING".equals(order.getOrderStatusCode().getCode())) {
-            log.warn("결제 실패 처리할 수 없는 주문 상태: orderId={}, currentStatus={}", 
+            log.warn("결제 실패 처리할 수 없는 주문 상태: orderId={}, currentStatus={}",
                     orderId, order.getOrderStatusCode().getCode());
             return;
         }
