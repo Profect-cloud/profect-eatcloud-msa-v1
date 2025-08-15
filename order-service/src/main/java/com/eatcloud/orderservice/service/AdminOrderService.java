@@ -10,7 +10,6 @@ import com.eatcloud.orderservice.entity.OrderStatusCode;
 import com.eatcloud.orderservice.repository.OrderStatusCodeRepository;
 
 import java.util.UUID;
-
 @Service
 @RequiredArgsConstructor
 @Transactional

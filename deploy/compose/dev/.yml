@@ -42,11 +42,14 @@ services:
   store-service:
     env_file:
       - ../env/dev/store-service.env
+      - ../env/dev/store-db.env
 
   order-service:
     env_file:
       - ../env/dev/order-service.env
+      - ../env/dev/order-db.env
 
   payment-service:
     env_file:
       - ../env/dev/payment-service.env
+      - ../env/dev/payment-db.env

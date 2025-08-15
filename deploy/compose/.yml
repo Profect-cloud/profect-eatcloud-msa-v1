@@ -161,7 +161,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-devpassword123}
     volumes:
       - eatcloud_db_data:/var/lib/postgresql/data
-      - ./database-init:/docker-entrypoint-initdb.d:ro
+      - ../../database-init:/docker-entrypoint-initdb.d:ro
     networks:
       - eatcloud-network
     restart: unless-stopped
@@ -300,7 +300,7 @@ services:
       dockerfile: order-service/Dockerfile
     container_name: order-service
     ports:
-      - "8086:8086"
+      - "8086:8080"
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
       DB_HOST: eatcloud-db
@@ -310,13 +310,11 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-devpassword123}
       REDIS_HOST: redis
       EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka
-      SERVER_PORT: 8086
     depends_on:
       eatcloud-db:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
-    restart: on-failure:3
 
   payment-service:
     <<: *service-config

@@ -158,15 +158,6 @@ public class OrderService {
         orderRepository.save(order);
 
         log.info("주문 결제 완료 처리: orderId={}, paymentId={}", orderId, paymentId);
-
-        try {
-            externalApiService.invalidateCart(order.getCustomerId());
-            log.info("Cart invalidated after successful payment for customer: {}, order: {}",
-                    order.getCustomerId(), order.getOrderNumber());
-        } catch (Exception e) {
-            log.error("Failed to invalidate cart after payment completion for customer: {}, order: {}",
-                    order.getCustomerId(), order.getOrderNumber(), e);
-        }
     }
 
     public void failPayment(UUID orderId, String failureReason) {

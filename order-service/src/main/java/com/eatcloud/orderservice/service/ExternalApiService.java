@@ -45,27 +45,7 @@ public class ExternalApiService {
         }
     }
 
-    /**
-     * 고객 장바구니 무효화
-     */
-    public void invalidateCart(UUID customerId) {
-        try {
-            String url = "http://customer-service/customers/" + customerId + "/cart/invalidate";
 
-            restTemplate.exchange(
-                    url,
-                    HttpMethod.POST,
-                    null,
-                    Void.class
-            );
-
-            log.info("Cart invalidated successfully for customerId: {}", customerId);
-
-        } catch (RestClientException e) {
-            log.error("Failed to invalidate cart for customerId: {}", customerId, e);
-            // 장바구니 무효화 실패는 무시 (주문은 계속 진행)
-        }
-    }
 
     /**
      * 메뉴 가격 조회
