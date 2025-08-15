@@ -24,6 +24,72 @@ x-service-config: &service-config
         memory: 768M
 
 services:
+  # 데이터베이스 초기화 서비스 (자동으로 스키마 파일들을 통합)
+  db-init:
+    image: alpine:latest
+    container_name: db-init
+    volumes:
+      - ../../database-init:/output
+      - ../../auth-service/src/main/resources/db:/input/auth:ro
+      - ../../customer-service/src/main/resources/db:/input/customer:ro
+      - ../../admin-service/src/main/resources/db:/input/admin:ro
+      - ../../manager-service/src/main/resources/db:/input/manager:ro
+      - ../../store-service/src/main/resources/db:/input/store:ro
+      - ../../order-service/src/main/resources/db:/input/order:ro
+      - ../../payment-service/src/main/resources/db:/input/payment:ro
+    command: >
+      sh -c '
+        echo "Creating database initialization scripts...";
+        mkdir -p /output;
+      
+        echo "-- 각 서비스별 데이터베이스 생성" > /output/01-init-databases.sql;
+        echo "CREATE DATABASE auth_db;" >> /output/01-init-databases.sql;
+        echo "CREATE DATABASE customer_db;" >> /output/01-init-databases.sql;
+        echo "CREATE DATABASE admin_db;" >> /output/01-init-databases.sql;
+        echo "CREATE DATABASE manager_db;" >> /output/01-init-databases.sql;
+        echo "CREATE DATABASE store_db;" >> /output/01-init-databases.sql;
+        echo "CREATE DATABASE order_db;" >> /output/01-init-databases.sql;
+        echo "CREATE DATABASE payment_db;" >> /output/01-init-databases.sql;
+      
+        echo "✓ Created database creation script";
+      
+        counter=2;
+        for service in auth customer admin manager store order payment; do
+          if [ -f "/input/$$service/schema.sql" ]; then
+            num=$$(printf "%02d" $$counter);
+            output_file="/output/$$num-$$service-schema.sql";
+            echo "\\c $${service}_db;" > "$$output_file";
+            echo "" >> "$$output_file";
+            cat "/input/$$service/schema.sql" >> "$$output_file";
+            echo "" >> "$$output_file";
+            echo "✓ Created $$num-$$service-schema.sql";
+          else
+            echo "⚠ Warning: /input/$$service/schema.sql not found";
+          fi;
+          counter=$$((counter + 1));
+        done;
+      
+        counter=10;
+        for service in auth customer admin manager store order payment; do
+          if [ -f "/input/$$service/data.sql" ]; then
+            num=$$(printf "%02d" $$counter);
+            output_file="/output/$$num-$$service-data.sql";
+            echo "\\c $${service}_db;" > "$$output_file";
+            echo "" >> "$$output_file";
+            cat "/input/$$service/data.sql" >> "$$output_file";
+            echo "" >> "$$output_file";
+            echo "✓ Created $$num-$$service-data.sql";
+          fi;
+          counter=$$((counter + 1));
+        done;
+      
+        echo "🎉 Database initialization scripts created successfully!";
+        echo "📁 Generated files:";
+        ls -la /output/;
+      '
+    networks:
+      - eatcloud-network
+
   # Infrastructure Services
   eureka-server:
     <<: *common-config
@@ -85,17 +151,17 @@ services:
   eatcloud-db:
     image: postgis/postgis:17-3.4
     container_name: eatcloud-db
+    depends_on:
+      - db-init
     ports:
       - "${DB_PORT:-5432}:5432"
     environment:
       POSTGRES_DB: ${DB_NAME:-eatcloud_db}
       POSTGRES_USER: ${DB_USER:-eatcloud_user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-devpassword123}
-      # Enable multiple databases creation for new service structure
-      POSTGRES_MULTIPLE_DATABASES: auth_db,customer_db,admin_db,owner_db,store_db,order_db,payment_db
     volumes:
       - eatcloud_db_data:/var/lib/postgresql/data
-      - ./scripts/create-multiple-databases.sh:/docker-entrypoint-initdb.d/00-create-multiple-databases.sh:ro
+      - ../../database-init:/docker-entrypoint-initdb.d:ro
     networks:
       - eatcloud-network
     restart: unless-stopped
@@ -110,9 +176,7 @@ services:
           cpus: "1.00"
           memory: 1024M
 
-  # Microservices (commented out - uncomment when ready to use)
-  # All services will connect to the single eatcloud-db instance
-  
+  # Microservices
   auth-service:
     <<: *service-config
     build:

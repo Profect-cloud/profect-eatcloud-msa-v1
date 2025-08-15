@@ -20,22 +20,7 @@ services:
   eatcloud-db:
     env_file:
       - ../env/dev/eatcloud-db.env
-    volumes:
-      # Add all schema and data initialization scripts for new service structure
-      - ../../auth-service/src/main/resources/db/schema.sql:/docker-entrypoint-initdb.d/10-auth-schema.sql:ro
-      - ../../auth-service/src/main/resources/db/data.sql:/docker-entrypoint-initdb.d/11-auth-data.sql:ro
-      - ../../customer-service/src/main/resources/db/schema.sql:/docker-entrypoint-initdb.d/20-customer-schema.sql:ro
-      - ../../customer-service/src/main/resources/db/data.sql:/docker-entrypoint-initdb.d/21-customer-data.sql:ro
-      - ../../admin-service/src/main/resources/db/schema.sql:/docker-entrypoint-initdb.d/30-admin-schema.sql:ro
-      - ../../admin-service/src/main/resources/db/data.sql:/docker-entrypoint-initdb.d/31-admin-data.sql:ro
-      - ../../manager-service/src/main/resources/db/schema.sql:/docker-entrypoint-initdb.d/40-manager-schema.sql:ro
-      - ../../manager-service/src/main/resources/db/data.sql:/docker-entrypoint-initdb.d/41-manager-data.sql:ro
-      - ../../store-service/src/main/resources/db/schema.sql:/docker-entrypoint-initdb.d/50-store-schema.sql:ro
-      - ../../store-service/src/main/resources/db/data.sql:/docker-entrypoint-initdb.d/51-store-data.sql:ro
-      - ../../order-service/src/main/resources/db/schema.sql:/docker-entrypoint-initdb.d/60-order-schema.sql:ro
-      - ../../order-service/src/main/resources/db/data.sql:/docker-entrypoint-initdb.d/61-order-data.sql:ro
-      - ../../payment-service/src/main/resources/db/schema.sql:/docker-entrypoint-initdb.d/70-payment-schema.sql:ro
-      - ../../payment-service/src/main/resources/db/data.sql:/docker-entrypoint-initdb.d/71-payment-data.sql:ro
+
 
   # Uncomment services when ready to use
   auth-service:
@@ -57,11 +42,14 @@ services:
   store-service:
     env_file:
       - ../env/dev/store-service.env
+      - ../env/dev/store-db.env
 
   order-service:
     env_file:
       - ../env/dev/order-service.env
+      - ../env/dev/order-db.env
 
   payment-service:
     env_file:
       - ../env/dev/payment-service.env
+      - ../env/dev/payment-db.env
