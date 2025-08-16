@@ -70,7 +70,10 @@ public class AuthController {
 		UUID userId = jwtTokenProvider.getIdFromToken(token);
 		String role = jwtTokenProvider.getTypeFromToken(token);
 
-		refreshTokenService.delete(role, userId);
+		Object user = refreshTokenService.findUserByRoleAndId(role, userId);
+		if (user != null) {
+			refreshTokenService.delete(user);
+		}
 
 		long expirationMillis = jwtTokenProvider.getExpirationTime(token);
 		long nowMillis = System.currentTimeMillis();
@@ -89,11 +92,12 @@ public class AuthController {
 		UUID userId = jwtTokenProvider.getIdFromToken(refreshToken);
 		String role = jwtTokenProvider.getTypeFromToken(refreshToken);
 
-		if (!refreshTokenService.isValid(role, userId, refreshToken)) {
+		Object user = refreshTokenService.findUserByRoleAndId(role, userId);
+		if (user == null || !refreshTokenService.isValid(user, refreshToken)) {
 			long expirationSeconds = jwtTokenProvider.getExpirationTime(refreshToken) - System.currentTimeMillis();
 			refreshTokenService.addToBlacklist(refreshToken, expirationSeconds);
+			if (user != null) refreshTokenService.delete(user);
 
-			refreshTokenService.delete(role, userId);
 			return ApiResponse.of(ApiResponseStatus.UNAUTHORIZED, null);
 		}
 
@@ -101,7 +105,7 @@ public class AuthController {
 		String newRefreshToken = jwtTokenProvider.createRefreshToken(userId, role);
 		LocalDateTime expiryDate = LocalDateTime.now().plusDays(7);
 
-		refreshTokenService.saveOrUpdateToken(role, userId, newRefreshToken, expiryDate);
+		refreshTokenService.saveOrUpdateToken(user, newRefreshToken, expiryDate);
 
 		LoginResponseDto response = LoginResponseDto.builder()
 				.token(newAccessToken)

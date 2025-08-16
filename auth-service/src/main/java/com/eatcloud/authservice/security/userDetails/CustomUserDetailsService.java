@@ -12,11 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.web.client.RestTemplate;
 
-@Service("customUserDetailsService")
+@Service
 public class CustomUserDetailsService implements UserDetailsService {
 
 	private final RestTemplate restTemplate;
-	private final String gatewayUrl = "http://gateway"; // Gateway 주소
+	private final String gatewayUrl = "http://api-gateway"; // Gateway 주소
 
 	public CustomUserDetailsService(RestTemplate restTemplate) {
 		this.restTemplate = restTemplate;
@@ -25,8 +25,8 @@ public class CustomUserDetailsService implements UserDetailsService {
 	/**
 	 * UUID와 사용자 타입("admin", "manager", "customer")을 받아 UserDetails 반환
 	 */
-	public UserDetails loadUserByUsername(UUID id, String type) {
-		Map<?, ?> user = getUserFromGateway(type, id);
+	public UserDetails loadUserByIdAndType(UUID id, String type) {
+		Map<?, ?> user = getUserFromService(type, id);
 
 		if (user == null) {
 			throw new UsernameNotFoundException(type + "을 찾을 수 없습니다: " + id);
@@ -50,8 +50,21 @@ public class CustomUserDetailsService implements UserDetailsService {
 	/**
 	 * Gateway를 통해 유저 정보 조회
 	 */
-	private Map<?, ?> getUserFromGateway(String type, UUID id) {
-		String url = gatewayUrl + "/api/" + type + "s/" + id;
+	private Map<?, ?> getUserFromService(String type, UUID id) {
+		String serviceName = switch (type.toLowerCase()) {
+			case "admin", "manager" -> type + "-service"; // admin-service, manager-service
+			case "customer" -> "customer-service";
+			default -> throw new IllegalArgumentException("알 수 없는 사용자 타입: " + type);
+		};
+
+		String path = switch (type.toLowerCase()) {
+			case "admin", "manager" -> type;        // singular
+			case "customer" -> "customers";         // plural
+			default -> throw new IllegalArgumentException("알 수 없는 사용자 타입: " + type);
+		};
+
+		String url = "http://" + serviceName + "/api/v1/" + path + "/" + id;
+
 		try {
 			return restTemplate.getForObject(url, Map.class);
 		} catch (Exception e) {
@@ -61,6 +74,6 @@ public class CustomUserDetailsService implements UserDetailsService {
 
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-		throw new UnsupportedOperationException("loadUserByUsername(UUID id, String type)을 사용하세요.");
+		throw new UnsupportedOperationException("loadUserByIdAndType(UUID id, String type)을 사용하세요.");
 	}
 }

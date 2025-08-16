@@ -18,17 +18,18 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
 import com.eatcloud.authservice.security.userDetails.CustomUserDetailsService;
 
 @Component
-@RequiredArgsConstructor
 public class JwtAuthorizationFilter extends OncePerRequestFilter {
 
 	private final JwtTokenProvider jwtTokenProvider;
-
-	@Qualifier("customUserDetailsService")
 	private final CustomUserDetailsService customUserDetailsService;
+
+	public JwtAuthorizationFilter(JwtTokenProvider jwtTokenProvider, CustomUserDetailsService customUserDetailsService) {
+		this.jwtTokenProvider = jwtTokenProvider;
+		this.customUserDetailsService = customUserDetailsService;
+	}
 
 	// 로그인, 회원가입, OAuth 콜백 등은JWT 인증 없이 접근 가능해야 한다.
 	@Override
@@ -71,20 +72,11 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 				UUID userId = jwtTokenProvider.getIdFromToken(token);
 				String userType = jwtTokenProvider.getTypeFromToken(token);
 
-				UserDetails userDetails = customUserDetailsService.loadUserByUsername(userId, userType);
+				UserDetails userDetails = customUserDetailsService.loadUserByIdAndType(userId, userType);
 
-				List<GrantedAuthority> authorities;
-				if ("admin".equals(userType)) {
-					authorities = List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));
-				} else if ("manager".equals(userType)) {
-					authorities = List.of(new SimpleGrantedAuthority("ROLE_MANAGER"));
-				} else {
-					authorities = List.of(new SimpleGrantedAuthority("ROLE_CUSTOMER"));
-				}
+				UsernamePasswordAuthenticationToken authentication =
+						new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 
-				// 5) Authentication 객체 생성 및 SecurityContext에 등록
-				UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-					userDetails, null, authorities);
 				SecurityContextHolder.getContext().setAuthentication(authentication);
 			} catch (ExpiredJwtException e) {
 				response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

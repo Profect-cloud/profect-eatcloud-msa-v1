@@ -1,4 +1,4 @@
-package com.eatcloud.authservice.config;
+package com.eatcloud.customerservice.config;
 
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;

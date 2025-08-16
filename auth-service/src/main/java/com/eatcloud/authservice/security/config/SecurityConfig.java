@@ -18,12 +18,10 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import lombok.RequiredArgsConstructor;
 import com.eatcloud.authservice.security.jwt.JwtAuthorizationFilter;
 
 @Configuration
 @EnableMethodSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
 	private static final List<String> ALLOWED_ORIGINS = List.of(
 		"http://localhost:3000",
@@ -81,30 +79,28 @@ public class SecurityConfig {
 		//boolean isTestProfile = "test".equals(System.getProperty("spring.profiles.active"));
 
 		http
-			.csrf(csrf -> csrf.disable())
-			.cors(cors -> cors.configurationSource(corsConfigurationSource()))
-			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
-			.formLogin(form -> form.disable())
-			.authorizeHttpRequests(auth -> auth
-				.requestMatchers(PERMIT_URLS).permitAll()
-				.requestMatchers("/api/v1/customers/**").hasRole("CUSTOMER")
-				.requestMatchers("/api/v1/manager/**").hasRole("MANAGER")
-				.requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-				.anyRequest().authenticated()
-			)
-			.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-			.exceptionHandling(exception -> exception
-				.authenticationEntryPoint((_, response, _) -> {
-					response.setStatus(HttpStatus.UNAUTHORIZED.value());
-					response.setContentType("application/json");
-					response.getWriter().write("{\"error\": \"Unauthorized access\"}");
-				})
-				.accessDeniedHandler((req, res, accessDeniedEx) -> {
-					res.setStatus(HttpStatus.FORBIDDEN.value());
-					res.setContentType("application/json");
-					res.getWriter().write("{\"error\": \"Forbidden: 권한이 없습니다.\"}");
-				})
-			);
+				.csrf(csrf -> csrf.disable())
+				.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+				.formLogin(form -> form.disable())
+				.authorizeHttpRequests(auth -> auth
+						.requestMatchers(PERMIT_URLS).permitAll()
+						// auth-service 안에서만 접근 가능하도록 role 설정
+						.anyRequest().authenticated()
+				)
+				.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+				.exceptionHandling(ex -> ex
+						.authenticationEntryPoint((req, res, e) -> {
+							res.setStatus(HttpStatus.UNAUTHORIZED.value());
+							res.setContentType("application/json");
+							res.getWriter().write("{\"error\":\"Unauthorized\"}");
+						})
+						.accessDeniedHandler((req, res, e) -> {
+							res.setStatus(HttpStatus.FORBIDDEN.value());
+							res.setContentType("application/json");
+							res.getWriter().write("{\"error\":\"Forbidden\"}");
+						})
+				);
 
 		//		// ✅ 테스트가 아닐 때만 필터 등록
 		//		if (!isTestProfile) {
