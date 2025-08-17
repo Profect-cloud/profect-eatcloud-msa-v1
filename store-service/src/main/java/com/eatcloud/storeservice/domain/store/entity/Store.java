@@ -28,6 +28,9 @@ public class Store extends BaseTimeEntity {
     @Column(name = "manager_id", nullable = true, columnDefinition = "uuid")
     private UUID managerId;
 
+    @Column(name = "application_id", unique = true)
+    private UUID applicationId;
+
     @Column(name = "store_name", nullable = false, length = 200)
     private String storeName;
 

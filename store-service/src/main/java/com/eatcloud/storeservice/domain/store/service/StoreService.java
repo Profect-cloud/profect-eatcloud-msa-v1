@@ -3,12 +3,14 @@ package com.eatcloud.storeservice.domain.store.service;
 import com.eatcloud.storeservice.domain.store.dto.StoreSearchByMenuCategoryRequestDto;
 import com.eatcloud.storeservice.domain.store.dto.StoreSearchRequestDto;
 import com.eatcloud.storeservice.domain.store.dto.StoreSearchResponseDto;
+import com.eatcloud.storeservice.domain.store.exception.StoreAccessDeniedException;
 import com.eatcloud.storeservice.domain.store.repository.StoreRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class StoreService {
@@ -36,5 +38,11 @@ public class StoreService {
                 condition.getUserLon(),
                 condition.getDistanceKm()
         );
+    }
+
+    private void validateManagerStoreAccess(UUID managerId, UUID storeId) {
+        if (managerId == null || storeId == null) throw new IllegalArgumentException("ids required");
+        boolean ok = storeRepository.existsByStoreIdAndManagerId(storeId, managerId);
+        if (!ok) throw new StoreAccessDeniedException(managerId.toString(), storeId.toString());
     }
 }
