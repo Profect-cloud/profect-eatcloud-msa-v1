@@ -1,9 +1,9 @@
 package com.eatcloud.adminservice.domain.globalCategory.entity;
 
+import com.eatcloud.adminservice.global.timeData.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import profect.eatcloud.global.timeData.BaseTimeEntity;
 
 @MappedSuperclass
 @Getter

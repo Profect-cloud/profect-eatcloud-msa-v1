@@ -15,8 +15,11 @@ public enum AdminErrorCode {
 	STORE_SERVICE_TIMEOUT("ADMIN_012", "스토어 서비스 응답 시간 초과"),
 	STORE_SERVICE_BAD_REQUEST("ADMIN_013", "스토어 서비스에 잘못된 요청입니다"),
 	IDEMPOTENCY_CONFLICT("ADMIN_014", "이미 처리된 요청입니다(멱등키 충돌)"),
-	UNAUTHORIZED_INTERNAL_CALL("ADMIN_015", "내부 서비스 인증/권한 오류");
-
+	UNAUTHORIZED_INTERNAL_CALL("ADMIN_015", "내부 서비스 인증/권한 오류"),
+	MANAGER_SERVICE_FAILED("ADMIN_016", "매니저 서비스 호출에 실패했습니다"),
+	MANAGER_SERVICE_TIMEOUT("ADMIN_017", "매니저 서비스 응답 시간 초과"),
+	MANAGER_SERVICE_BAD_REQUEST("ADMIN_018", "매니저 서비스에 잘못된 요청입니다"),
+	CUSTOMER_SERVICE_FAILED("ADMIN_019", "고객 서비스 호출에 실패했습니다");
 
 
 	private final String code;

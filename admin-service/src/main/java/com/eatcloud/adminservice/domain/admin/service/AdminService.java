@@ -1,140 +1,61 @@
 package com.eatcloud.adminservice.domain.admin.service;
 
 import com.eatcloud.adminservice.domain.admin.dto.ManagerDto;
+import com.eatcloud.adminservice.domain.admin.dto.StoreDto;
 import com.eatcloud.adminservice.domain.admin.dto.UserDto;
-import com.eatcloud.adminservice.domain.admin.exception.AdminErrorCode;
-import com.eatcloud.adminservice.domain.admin.exception.AdminException;
-import lombok.AllArgsConstructor;
+import com.eatcloud.adminservice.ports.CustomerAdminPort;
+import com.eatcloud.adminservice.ports.ManagerDirectoryPort;
+import com.eatcloud.adminservice.ports.StoreDirectoryPort;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class AdminService {
-	private final CustomerRepository customerRepository;
-	private final ManagerRepository managerRepository;
-	private final StoreRepository_hong storeRepository;
 
-	@Transactional(readOnly = true)
+	private final CustomerAdminPort customerPort;
+	private final ManagerDirectoryPort managerPort;
+	private final StoreDirectoryPort storePort;
+
+	// ============ Customers ============
 	public List<UserDto> getAllCustomers() {
-		return customerRepository.findAll().stream()
-			.map(c -> UserDto.builder()
-				.id(c.getId())
-				.name(c.getName())
-				.nickname(c.getNickname())
-				.email(c.getEmail())
-				.phoneNumber(c.getPhoneNumber())
-				.points(c.getPoints())
-				.build()
-			)
-			.collect(Collectors.toList());
+		return customerPort.findAll();
 	}
 
-	@Transactional(readOnly = true)
 	public UserDto getCustomerByEmail(String email) {
-		Customer c = customerRepository.findByEmail(email)
-			.orElseThrow(() -> new AdminException(AdminErrorCode.CUSTOMER_NOT_FOUND));
-
-		return UserDto.builder()
-			.id(c.getId())
-			.name(c.getName())
-			.nickname(c.getNickname())
-			.email(c.getEmail())
-			.phoneNumber(c.getPhoneNumber())
-			.points(c.getPoints())
-			.build();
+		return customerPort.getByEmail(email);
 	}
 
-	@Transactional
 	public void deleteCustomerByEmail(String email) {
-		Customer c = customerRepository.findByEmail(email)
-			.orElseThrow(() -> new AdminException(AdminErrorCode.CUSTOMER_NOT_FOUND));
-
-		customerRepository.deleteById(c.getId());
+		customerPort.deleteByEmail(email);
 	}
 
-	@Transactional(readOnly = true)
+	// ============ Managers ============
 	public List<ManagerDto> getAllManagers() {
-		return managerRepository.findAll().stream()
-			.map(m -> ManagerDto.builder()
-				.id(m.getId())
-				.name(m.getName())
-				.email(m.getEmail())
-				.phoneNumber(m.getPhoneNumber())
-				.storeId(m.getStore() != null ? m.getStore().getStoreId() : null)
-				.build()
-			)
-			.collect(Collectors.toList());
+		return managerPort.findAll();
 	}
 
-	@Transactional(readOnly = true)
 	public ManagerDto getManagerByEmail(String email) {
-		Manager m = managerRepository.findByEmail(email)
-			.orElseThrow(() -> new AdminException(AdminErrorCode.MANAGER_NOT_FOUND));
-
-		return ManagerDto.builder()
-			.id(m.getId())
-			.name(m.getName())
-			.email(m.getEmail())
-			.phoneNumber(m.getPhoneNumber())
-			.storeId(m.getStore() != null ? m.getStore().getStoreId() : null)
-			.build();
+		return managerPort.getByEmail(email);
 	}
 
-	@Transactional
 	public void deleteManagerByEmail(String email) {
-		Manager m = managerRepository.findByEmail(email)
-			.orElseThrow(() -> new AdminException(AdminErrorCode.MANAGER_NOT_FOUND));
-
-		managerRepository.deleteById(m.getId());
+		managerPort.deleteByEmail(email);
 	}
 
-	@Transactional(readOnly = true)
+	// ============ Stores ============
 	public List<StoreDto> getStores() {
-		return storeRepository.findAll().stream()
-			.map(s -> StoreDto.builder()
-				.storeId(s.getStoreId())
-				.storeName(s.getStoreName())
-				.categoryId(s.getStoreCategory().getId())
-				.minCost(s.getMinCost())
-				.description(s.getDescription())
-				.storeLat(s.getStoreLat())
-				.storeLon(s.getStoreLon())
-				.openStatus(s.getOpenStatus())
-				.openTime(s.getOpenTime())
-				.closeTime(s.getCloseTime())
-				.build()
-			)
-			.collect(Collectors.toList());
+		return storePort.findAll();
 	}
 
-	@Transactional(readOnly = true)
 	public StoreDto getStore(UUID storeId) {
-		Store s = storeRepository.findById(storeId)
-			.orElseThrow(() -> new AdminException(AdminErrorCode.STORE_NOT_FOUND));
-		return StoreDto.builder()
-			.storeId(s.getStoreId())
-			.storeName(s.getStoreName())
-			.categoryId(s.getStoreCategory().getId())
-			.minCost(s.getMinCost())
-			.description(s.getDescription())
-			.storeLat(s.getStoreLat())
-			.storeLon(s.getStoreLon())
-			.openStatus(s.getOpenStatus())
-			.openTime(s.getOpenTime())
-			.closeTime(s.getCloseTime())
-			.build();
+		return storePort.getById(storeId);
 	}
 
-	@Transactional
 	public void deleteStore(UUID storeId) {
-		storeRepository.findById(storeId)
-			.orElseThrow(() -> new AdminException(AdminErrorCode.STORE_NOT_FOUND));
-		storeRepository.deleteById(storeId);
+		storePort.deleteById(storeId);
 	}
-
 }

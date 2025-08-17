@@ -13,7 +13,8 @@ public class CreateStoreCommand {
     private String storeName;
     private String storeAddress;
     private String storePhoneNumber;
-    private UUID categoryId;
+    private Integer categoryId;
     private String description;
+
 }
 

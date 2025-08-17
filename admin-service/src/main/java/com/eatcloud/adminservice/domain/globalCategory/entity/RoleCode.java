@@ -1,11 +1,11 @@
 package com.eatcloud.adminservice.domain.globalCategory.entity;
 
+import com.eatcloud.adminservice.global.timeData.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.*;
-import profect.eatcloud.global.timeData.BaseTimeEntity;
 
 @Entity
 @Table(name = "role_codes")
