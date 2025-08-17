@@ -71,22 +71,25 @@ public class AdminAssignService {
 	public void approveApplication(UUID adminId, UUID applicationId) {
 		var app = applicationRepository.findById(applicationId)
 				.orElseThrow(() -> new AdminException(AdminErrorCode.APPLICATION_NOT_FOUND));
+
 		if (!"PENDING".equals(app.getStatus())) {
 			throw new AdminException(AdminErrorCode.APPLICATION_ALREADY_PROCESSED);
 		}
 
-		// 1) 매니저 계정 보장(없으면 생성, 있으면 업데이트) → managerId 확보
+		// (선택) 카테고리 존재 검증
+		if (app.getCategoryId() != null && !categoryRepository.existsById(app.getCategoryId())) {
+			throw new AdminException(AdminErrorCode.CATEGORY_NOT_FOUND);
+		}
 
+		// 1) 매니저 계정 보장 → email 기반 upsert, managerId 반환
 		UUID managerId = managerAdminPort.upsert(new ManagerUpsertCommand(
-				app.getManagerId(),              // 보통 null, 있으면 전달
+				null,                              // 신청서엔 managerId가 없으므로 null
 				app.getManagerEmail(),
 				app.getManagerName(),
 				app.getManagerPhoneNumber()
-				// ❗비밀번호는 admin에서 다루지 않는 걸 권장(초대/임시비번은 auth가 처리)
 		));
-		app.setManagerId(managerId);         // 추적용(선택)
 
-		// 2) 스토어 생성(멱등: applicationId)
+		// 2) 스토어 생성(멱등키: applicationId)
 		storeAdminPort.createStore(new CreateStoreCommand(
 				app.getApplicationId(),
 				managerId,
@@ -103,20 +106,27 @@ public class AdminAssignService {
 		applicationRepository.save(app);
 	}
 
-
+	// AdminAssignService (또는 AdminService)
 	@Transactional
 	public void rejectApplication(UUID adminId, UUID applicationId) {
+		rejectApplication(adminId, applicationId, null); // 코멘트 없이 거절
+	}
+
+	@Transactional
+	public void rejectApplication(UUID adminId, UUID applicationId, String comment) {
 		var app = applicationRepository.findById(applicationId)
 				.orElseThrow(() -> new AdminException(AdminErrorCode.APPLICATION_NOT_FOUND));
 
+		if ("REJECTED".equals(app.getStatus())) return;
 		if (!"PENDING".equals(app.getStatus())) {
 			throw new AdminException(AdminErrorCode.APPLICATION_ALREADY_PROCESSED);
 		}
 
 		app.setStatus("REJECTED");
 		app.setReviewerAdminId(adminId);
+		app.setReviewComment(comment); // null 가능
 		applicationRepository.save(app);
-		// (선택) 반려 알림 이벤트 발행 가능
 	}
+
 }
 
