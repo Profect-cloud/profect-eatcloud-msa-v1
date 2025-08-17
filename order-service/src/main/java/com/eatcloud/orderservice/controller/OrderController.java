@@ -41,9 +41,16 @@ public class OrderController {
 			@RequestHeader("X-User-Id") String userId,
 			@RequestBody CreateOrderRequest request) {
 		
-		UUID customerId = UUID.fromString(userId);
-		CreateOrderResponse response = orderService.createOrderFromCart(customerId, request);
-		return ResponseEntity.ok(ApiResponse.success(response));
+		try {
+			UUID customerId = UUID.fromString(userId);
+			CreateOrderResponse response = orderService.createOrderFromCart(customerId, request);
+			return ResponseEntity.ok(ApiResponse.success(response));
+		} catch (IllegalArgumentException e) {
+			log.error("Invalid user ID format: {}", userId);
+			return ResponseEntity.badRequest()
+				.body(ApiResponse.error("유효하지 않은 사용자 ID입니다."));
+		}
+		// OrderException과 CartException은 GlobalExceptionHandler에서 처리
 	}
 
 	@GetMapping("/{orderId}")

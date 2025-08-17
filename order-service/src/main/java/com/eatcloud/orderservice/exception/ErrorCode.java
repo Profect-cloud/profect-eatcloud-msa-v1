@@ -18,6 +18,8 @@ public enum ErrorCode {
     // Order 관련 에러
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "주문을 찾을 수 없습니다."),
     INVALID_ORDER_STATUS(HttpStatus.BAD_REQUEST, "유효하지 않은 주문 상태입니다."),
+    ORDER_PROCESSING(HttpStatus.CONFLICT, "주문이 이미 처리 중입니다. 잠시 후 다시 시도해주세요."),
+    EMPTY_CART(HttpStatus.BAD_REQUEST, "장바구니가 비어있습니다."),
     
     // 일반 에러
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다.");

@@ -20,6 +20,15 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(errorCode.getMessage()));
     }
 
+    @ExceptionHandler(OrderException.class)
+    public ResponseEntity<ApiResponse<Object>> handleOrderException(OrderException e) {
+        log.error("Order exception occurred: {}", e.getMessage());
+        ErrorCode errorCode = e.getErrorCode();
+        return ResponseEntity
+                .status(errorCode.getStatus())
+                .body(ApiResponse.error(errorCode.getMessage()));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Object>> handleIllegalArgumentException(IllegalArgumentException e) {
         log.error("Illegal argument exception: {}", e.getMessage());

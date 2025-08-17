@@ -11,6 +11,8 @@ import com.eatcloud.orderservice.entity.OrderStatusCode;
 import com.eatcloud.orderservice.entity.OrderTypeCode;
 import com.eatcloud.orderservice.repository.OrderStatusCodeRepository;
 import com.eatcloud.orderservice.repository.OrderTypeCodeRepository;
+import com.eatcloud.orderservice.exception.OrderException;
+import com.eatcloud.orderservice.exception.ErrorCode;
 
 import com.eatcloud.orderservice.dto.CartItem;
 import com.eatcloud.orderservice.dto.request.CreateOrderRequest;
@@ -32,48 +34,86 @@ public class OrderService {
     private final OrderStatusCodeRepository orderStatusCodeRepository;
     private final OrderTypeCodeRepository orderTypeCodeRepository;
     private final ExternalApiService externalApiService;
+    private final RedisLockService redisLockService;
     
     @Autowired
     private CartService cartService;
     
+    /**
+     * 장바구니에서 주문 생성 - 분산락 적용
+     * 중복 주문 방지 및 장바구니 일관성 보장
+     */
     public CreateOrderResponse createOrderFromCart(UUID customerId, CreateOrderRequest request) {
-        List<CartItem> cartItems = cartService.getCart(customerId);
-        if (cartItems.isEmpty()) {
-            throw new RuntimeException("장바구니가 비어있습니다.");
+        // 분산락 키: 고객별로 하나씩
+        String lockKey = "order:create:" + customerId;
+        
+        // 1. 분산락 획득 시도 (5초 타임아웃)
+        boolean lockAcquired = redisLockService.tryLock(lockKey, 5);
+        
+        if (!lockAcquired) {
+            log.warn("Failed to acquire lock for customer: {}", customerId);
+            throw new OrderException(ErrorCode.ORDER_PROCESSING);
         }
-        
-        List<OrderMenu> orderMenuList = cartItems.stream()
-            .map(item -> OrderMenu.builder()
-                .menuId(item.getMenuId())
-                .menuName(item.getMenuName())
-                .quantity(item.getQuantity())
-                .price(item.getPrice())
-                .build())
-            .collect(Collectors.toList());
-        
-        Order order = createPendingOrder(
-            customerId,
-            request.getStoreId(),
-            orderMenuList,
-            request.getOrderType(),
-            request.getUsePoints(),
-            request.getPointsToUse()
-        );
         
         try {
-            cartService.clearCart(customerId);
+            log.info("Starting order creation for customer: {}", customerId);
+            
+            // 2. 장바구니 조회 (락으로 보호됨)
+            List<CartItem> cartItems = cartService.getCart(customerId);
+            if (cartItems.isEmpty()) {
+                throw new OrderException(ErrorCode.EMPTY_CART);
+            }
+            
+            // 3. 장바구니 아이템을 주문 메뉴로 변환
+            List<OrderMenu> orderMenuList = cartItems.stream()
+                .map(item -> OrderMenu.builder()
+                    .menuId(item.getMenuId())
+                    .menuName(item.getMenuName())
+                    .quantity(item.getQuantity())
+                    .price(item.getPrice())
+                    .build())
+                .collect(Collectors.toList());
+            
+            // 4. 주문 생성 (트랜잭션 내에서 처리)
+            Order order = createPendingOrder(
+                customerId,
+                request.getStoreId(),
+                orderMenuList,
+                request.getOrderType(),
+                request.getUsePoints(),
+                request.getPointsToUse()
+            );
+            
+            // 5. 장바구니 비우기 (락으로 보호됨)
+            try {
+                cartService.clearCart(customerId);
+                log.info("Cart cleared for customer: {}", customerId);
+            } catch (Exception e) {
+                // 장바구니 삭제 실패는 critical하지 않음 (나중에 정리 가능)
+                log.error("Failed to clear cart for customer: {}, but order created successfully", customerId, e);
+            }
+            
+            log.info("Order created successfully: orderId={}, customerId={}", order.getOrderId(), customerId);
+            
+            // 6. 응답 생성
+            return CreateOrderResponse.builder()
+                .orderId(order.getOrderId())
+                .orderNumber(order.getOrderNumber())
+                .totalPrice(order.getTotalPrice())
+                .finalPaymentAmount(order.getFinalPaymentAmount())
+                .orderStatus(order.getOrderStatusCode().getCode())
+                .message("주문이 생성되었습니다.")
+                .build();
+                
         } catch (Exception e) {
-            log.error("Failed to clear cart after order creation: {}", e.getMessage());
+            log.error("Order creation failed for customer: {}", customerId, e);
+            throw e;
+            
+        } finally {
+            // 7. 분산락 해제 (반드시 실행)
+            redisLockService.unlock(lockKey);
+            log.debug("Lock released for customer: {}", customerId);
         }
-        
-        return CreateOrderResponse.builder()
-            .orderId(order.getOrderId())
-            .orderNumber(order.getOrderNumber())
-            .totalPrice(order.getTotalPrice())
-            .finalPaymentAmount(order.getFinalPaymentAmount())
-            .orderStatus(order.getOrderStatusCode().getCode())
-            .message("주문이 생성되었습니다.")
-            .build();
     }
 
     public Order createPendingOrder(UUID customerId, UUID storeId, List<OrderMenu> orderMenuList, String orderType,
