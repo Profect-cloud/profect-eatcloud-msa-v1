@@ -125,7 +125,7 @@ public class AuthService {
 			throw new RuntimeException("인증 코드가 일치하지 않습니다.");
 		}
 
-		restTemplate.postForObject("http://customer-service/api/v1/customers", data.getRequest(), Void.class);
+		restTemplate.postForObject("http://customer-service/api/v1/customers/signup", data.getRequest(), Void.class);
 		redisTemplate.delete(key);
 	}
 
@@ -134,7 +134,7 @@ public class AuthService {
 			throw new RuntimeException("이미 존재하는 이메일입니다.");
 		}
 		// Gateway에 회원가입 요청
-		restTemplate.postForObject("http://customer-service/api/v1/customers", req, Void.class);
+		restTemplate.postForObject("http://customer-service/api/v1/customers/signup", req, Void.class);
 	}
 
 	private UserDto getCustomerByEmail(String email) {

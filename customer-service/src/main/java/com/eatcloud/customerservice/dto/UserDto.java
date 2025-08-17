@@ -1,11 +1,13 @@
 package com.eatcloud.customerservice.dto;
 
-import lombok.Builder;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.UUID;
 
+@Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class UserDto {
     private UUID id;

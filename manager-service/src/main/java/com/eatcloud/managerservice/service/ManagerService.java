@@ -3,15 +3,18 @@ package com.eatcloud.managerservice.service;
 import com.eatcloud.managerservice.dto.UserDto;
 import com.eatcloud.managerservice.entity.Manager;
 import com.eatcloud.managerservice.repository.ManagerRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ManagerService {
 
     private final ManagerRepository managerRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public ManagerService(ManagerRepository managerRepository) {
+    public ManagerService(ManagerRepository managerRepository, PasswordEncoder passwordEncoder) {
         this.managerRepository = managerRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public UserDto findByEmail(String email) {

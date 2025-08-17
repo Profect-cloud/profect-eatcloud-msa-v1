@@ -2,6 +2,7 @@ package com.eatcloud.managerservice.controller;
 
 import com.eatcloud.managerservice.dto.UserDto;
 import com.eatcloud.managerservice.service.ManagerService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -17,7 +18,8 @@ public class ManagerController {
     }
 
     @GetMapping("/search")
-    public UserDto getCustomerByEmail(@RequestParam String email) {
-        return managerService.findByEmail(email);
+    public ResponseEntity<UserDto> searchByEmail(@RequestParam String email) {
+        UserDto userDto = managerService.findByEmail(email);
+        return ResponseEntity.ok(userDto);
     }
 }

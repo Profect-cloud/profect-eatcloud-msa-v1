@@ -2,6 +2,7 @@ package com.eatcloud.customerservice.service;
 
 import com.eatcloud.customerservice.dto.SignupRequestDto;
 import com.eatcloud.customerservice.dto.UserDto;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -24,6 +25,7 @@ import com.eatcloud.customerservice.repository.CustomerRepository;
 public class CustomerService {
 
 	private final CustomerRepository customerRepository;
+	private final PasswordEncoder passwordEncoder;
 
 	private static final Pattern EMAIL_PATTERN = Pattern.compile(
 		"^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
@@ -32,8 +34,9 @@ public class CustomerService {
 		"^01[0-9]-[0-9]{4}-[0-9]{4}$"
 	);
 
-	public CustomerService(CustomerRepository customerRepository) {
+	public CustomerService(CustomerRepository customerRepository, PasswordEncoder passwordEncoder) {
 		this.customerRepository = Objects.requireNonNull(customerRepository, "CustomerRepository cannot be null");
+		this.passwordEncoder = Objects.requireNonNull(passwordEncoder, "PasswordEncoder cannot be null");
 	}
 
 	public Customer getCustomer(UUID customerId) {
@@ -120,15 +123,19 @@ public class CustomerService {
 				.build();
 	}
 
+	@Transactional
 	public void signup(SignupRequestDto request) {
-
-		Customer customer = new Customer();
-		customer.setEmail(request.getEmail());
-		customer.setPassword(request.getPassword());
-		customer.setName(request.getName());
-		customer.setNickname(request.getNickname());
-		customer.setPhoneNumber(request.getPhone());
-
-		customerRepository.save(customer);
+		try {
+			Customer customer = new Customer();
+			customer.setEmail(request.getEmail());
+			customer.setPassword(passwordEncoder.encode(request.getPassword()));
+			customer.setName(request.getName());
+			customer.setNickname(request.getNickname());
+			customer.setPhoneNumber(request.getPhone());
+			
+			customerRepository.save(customer);
+		} catch (Exception e) {
+			throw new RuntimeException("회원가입 처리 중 오류가 발생했습니다: " + e.getMessage());
+		}
 	}
 }

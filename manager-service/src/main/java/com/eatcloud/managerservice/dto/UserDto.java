@@ -1,12 +1,14 @@
 package com.eatcloud.managerservice.dto;
 
-import lombok.Builder;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.UUID;
 
 @Setter
+@Getter
 @Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class UserDto {
     private UUID id;
     private String email;

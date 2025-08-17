@@ -102,7 +102,7 @@ public class CustomerController {
 		return ResponseEntity.ok(userDto);
 	}
 
-	@PostMapping
+	@PostMapping("/signup")
 	public ResponseEntity<Void> signup(@RequestBody SignupRequestDto request) {
 		customerService.signup(request);
 		return ResponseEntity.ok().build();
