@@ -38,7 +38,13 @@ dependencies {
 	implementation 'org.springframework.cloud:spring-cloud-starter-loadbalancer'
 
 	runtimeOnly 'org.postgresql:postgresql'
-	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	
+	// Redis dependencies - Redisson으로 변경
+	// implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	// implementation 'org.apache.commons:commons-pool2' // Lettuce connection pool support
+	
+	// Redisson 추가 (분산락 및 분산 트랜잭션 지원)
+	implementation 'org.redisson:redisson-spring-boot-starter:3.24.3'
 
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	compileOnly 'org.projectlombok:lombok'

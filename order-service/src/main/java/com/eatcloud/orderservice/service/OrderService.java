@@ -11,6 +11,8 @@ import com.eatcloud.orderservice.entity.OrderStatusCode;
 import com.eatcloud.orderservice.entity.OrderTypeCode;
 import com.eatcloud.orderservice.repository.OrderStatusCodeRepository;
 import com.eatcloud.orderservice.repository.OrderTypeCodeRepository;
+import com.eatcloud.orderservice.exception.OrderException;
+import com.eatcloud.orderservice.exception.ErrorCode;
 
 import com.eatcloud.orderservice.dto.CartItem;
 import com.eatcloud.orderservice.dto.request.CreateOrderRequest;
@@ -20,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.List;
 import java.util.UUID;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,48 +35,90 @@ public class OrderService {
     private final OrderStatusCodeRepository orderStatusCodeRepository;
     private final OrderTypeCodeRepository orderTypeCodeRepository;
     private final ExternalApiService externalApiService;
+    private final DistributedLockService distributedLockService;
+    private final SagaOrchestrator sagaOrchestrator;
     
     @Autowired
     private CartService cartService;
     
+    /**
+     * 장바구니에서 주문 생성 - Saga 패턴 적용
+     * 분산 트랜잭션으로 처리하여 일관성 보장
+     */
     public CreateOrderResponse createOrderFromCart(UUID customerId, CreateOrderRequest request) {
-        List<CartItem> cartItems = cartService.getCart(customerId);
-        if (cartItems.isEmpty()) {
-            throw new RuntimeException("장바구니가 비어있습니다.");
-        }
-        
-        List<OrderMenu> orderMenuList = cartItems.stream()
-            .map(item -> OrderMenu.builder()
-                .menuId(item.getMenuId())
-                .menuName(item.getMenuName())
-                .quantity(item.getQuantity())
-                .price(item.getPrice())
-                .build())
-            .collect(Collectors.toList());
-        
-        Order order = createPendingOrder(
-            customerId,
-            request.getStoreId(),
-            orderMenuList,
-            request.getOrderType(),
-            request.getUsePoints(),
-            request.getPointsToUse()
-        );
+        // Saga 패턴을 통한 분산 트랜잭션 처리
+        return sagaOrchestrator.createOrderSaga(customerId, request);
+    }
+    
+    /**
+     * 레거시 메서드 - 단순 분산락만 사용하는 버전
+     * (하위 호환성을 위해 유지)
+     */
+    public CreateOrderResponse createOrderFromCartSimple(UUID customerId, CreateOrderRequest request) {
+        String lockKey = "order:create:" + customerId;
         
         try {
-            cartService.clearCart(customerId);
+            return distributedLockService.executeWithLock(
+                lockKey,
+                5,  // 5초 대기
+                10, // 10초 유지
+                TimeUnit.SECONDS,
+                () -> {
+                    log.info("Starting order creation for customer: {}", customerId);
+                    
+                    // 장바구니 조회
+                    List<CartItem> cartItems = cartService.getCart(customerId);
+                    if (cartItems.isEmpty()) {
+                        throw new OrderException(ErrorCode.EMPTY_CART);
+                    }
+                    
+                    // 장바구니 아이템을 주문 메뉴로 변환
+                    List<OrderMenu> orderMenuList = cartItems.stream()
+                        .map(item -> OrderMenu.builder()
+                            .menuId(item.getMenuId())
+                            .menuName(item.getMenuName())
+                            .quantity(item.getQuantity())
+                            .price(item.getPrice())
+                            .build())
+                        .collect(Collectors.toList());
+                    
+                    // 주문 생성
+                    Order order = createPendingOrder(
+                        customerId,
+                        request.getStoreId(),
+                        orderMenuList,
+                        request.getOrderType(),
+                        request.getUsePoints(),
+                        request.getPointsToUse()
+                    );
+                    
+                    // 장바구니 비우기
+                    try {
+                        cartService.clearCart(customerId);
+                        log.info("Cart cleared for customer: {}", customerId);
+                    } catch (Exception e) {
+                        log.error("Failed to clear cart for customer: {}, but order created successfully", customerId, e);
+                    }
+                    
+                    log.info("Order created successfully: orderId={}, customerId={}", order.getOrderId(), customerId);
+                    
+                    return CreateOrderResponse.builder()
+                        .orderId(order.getOrderId())
+                        .orderNumber(order.getOrderNumber())
+                        .totalPrice(order.getTotalPrice())
+                        .finalPaymentAmount(order.getFinalPaymentAmount())
+                        .orderStatus(order.getOrderStatusCode().getCode())
+                        .message("주문이 생성되었습니다.")
+                        .build();
+                }
+            );
         } catch (Exception e) {
-            log.error("Failed to clear cart after order creation: {}", e.getMessage());
+            log.error("Order creation failed for customer: {}", customerId, e);
+            if (e instanceof OrderException) {
+                throw (OrderException) e;
+            }
+            throw new OrderException(ErrorCode.ORDER_PROCESSING);
         }
-        
-        return CreateOrderResponse.builder()
-            .orderId(order.getOrderId())
-            .orderNumber(order.getOrderNumber())
-            .totalPrice(order.getTotalPrice())
-            .finalPaymentAmount(order.getFinalPaymentAmount())
-            .orderStatus(order.getOrderStatusCode().getCode())
-            .message("주문이 생성되었습니다.")
-            .build();
     }
 
     public Order createPendingOrder(UUID customerId, UUID storeId, List<OrderMenu> orderMenuList, String orderType,
