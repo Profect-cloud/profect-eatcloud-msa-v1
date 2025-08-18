@@ -22,10 +22,10 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/signup", "/api/v1/customers/signup", "/api/v1/customers/search").permitAll()  // 두 경로 모두 허용
+                .requestMatchers("/api/v1/customers/signup", "/api/v1/customers/search").permitAll()
                 .anyRequest().authenticated()  // 나머지는 인증 필요
             );
-        
+
         return http.build();
     }
 }

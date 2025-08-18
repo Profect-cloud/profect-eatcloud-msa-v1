@@ -15,6 +15,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+
+import com.eatcloud.customerservice.dto.request.ChangePasswordRequestDto;
 import com.eatcloud.customerservice.dto.request.CustomerProfileUpdateRequestDto;
 import com.eatcloud.customerservice.dto.request.CustomerWithdrawRequestDto;
 import com.eatcloud.customerservice.dto.response.CustomerProfileResponseDto;
@@ -106,5 +108,14 @@ public class CustomerController {
 	public ResponseEntity<Void> signup(@RequestBody SignupRequestDto request) {
 		customerService.signup(request);
 		return ResponseEntity.ok().build();
+	}
+
+	@PutMapping("/change-password")
+	public ResponseEntity<String> changePassword(
+		@RequestBody UUID customerId, // 인증 사용자로 변경 필요
+		@RequestBody ChangePasswordRequestDto request) {
+
+		customerService.changePassword(customerId, request);
+		return ResponseEntity.ok("비밀번호가 변경되었습니다.");
 	}
 }
