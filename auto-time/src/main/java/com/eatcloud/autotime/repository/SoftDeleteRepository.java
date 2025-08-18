@@ -2,6 +2,8 @@ package com.eatcloud.autotime.repository;
 
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.repository.NoRepositoryBean;
@@ -21,4 +23,5 @@ public interface SoftDeleteRepository<T extends BaseTimeEntity, ID extends Seria
 
 	// 복구
 	int restoreAllByIds(Collection<ID> ids);
+
 }
