@@ -6,5 +6,7 @@ public class BusinessException extends RuntimeException {
 		super(errorCode.message());
 		this.errorCode = errorCode;
 	}
-	public ErrorCode getErrorCode() { return errorCode; }
+	public ErrorCode getErrorCode() {
+		return errorCode;
+	}
 }

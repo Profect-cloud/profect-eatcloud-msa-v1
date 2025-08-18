@@ -4,7 +4,6 @@ import static java.util.stream.Collectors.toList;
 
 import java.util.List;
 import java.util.NoSuchElementException;
-import jakarta.validation.ConstraintViolationException;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +19,8 @@ import com.eatcloud.autoresponse.error.ApiError;
 import com.eatcloud.autoresponse.error.ApiFieldError;
 import com.eatcloud.autoresponse.error.BusinessException;
 import com.eatcloud.autoresponse.error.ErrorCode;
+
+import jakarta.validation.ConstraintViolationException;
 
 /**
  * 전역 예외 처리기 (MSA 공통)
@@ -37,7 +38,7 @@ public class ExceptionHandler {
 		return ResponseEntity.status(ec.status()).body(ApiResponse.from(ec));
 	}
 
-	/** @Valid DTO 필드 검증 실패 */
+
 	@org.springframework.web.bind.annotation.ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ApiResponse<ApiError>> handleInvalid(final MethodArgumentNotValidException ex) {
 		final List<ApiFieldError> errors = ex.getBindingResult()
@@ -46,7 +47,6 @@ public class ExceptionHandler {
 			.body(ApiResponse.badRequest(ApiError.of(errors, null)));
 	}
 
-	/** 바인딩 단계에서의 검증 실패 */
 	@org.springframework.web.bind.annotation.ExceptionHandler(BindException.class)
 	public ResponseEntity<ApiResponse<ApiError>> handleBind(final BindException ex) {
 		final List<ApiFieldError> errors = ex.getBindingResult()
@@ -55,7 +55,6 @@ public class ExceptionHandler {
 			.body(ApiResponse.badRequest(ApiError.of(errors, null)));
 	}
 
-	/** 파라미터 제약(예: @Min, @Pattern) 위반 */
 	@org.springframework.web.bind.annotation.ExceptionHandler(ConstraintViolationException.class)
 	public ResponseEntity<ApiResponse<ApiError>> handleConstraint(final ConstraintViolationException ex) {
 		final List<ApiFieldError> errors = ex.getConstraintViolations().stream()

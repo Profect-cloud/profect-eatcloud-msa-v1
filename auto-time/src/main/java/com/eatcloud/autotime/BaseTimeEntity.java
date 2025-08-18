@@ -11,7 +11,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
+import lombok.Getter;
 
+@Getter
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
 public abstract class BaseTimeEntity {
@@ -38,12 +40,7 @@ public abstract class BaseTimeEntity {
 	@Column(name = "deleted_by", length = 100)
 	protected String deletedBy;
 
-	public LocalDateTime getCreatedAt() { return createdAt; }
-	public String getCreatedBy() { return createdBy; }
-	public LocalDateTime getUpdatedAt() { return updatedAt; }
-	public String getUpdatedBy() { return updatedBy; }
-	public LocalDateTime getDeletedAt() { return deletedAt; }
-	public String getDeletedBy() { return deletedBy; }
+
 	public boolean isDeleted() { return deletedAt != null; }
 
 	// SoftDeleteRepository에서만 사용
