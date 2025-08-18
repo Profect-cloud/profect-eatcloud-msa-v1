@@ -141,6 +141,7 @@ public class CustomerService {
 		}
 	}
 
+	@Transactional
 	public void changePassword(UUID customerId, ChangePasswordRequestDto request) {
 		Customer customer = customerRepository.findById(customerId)
 			.orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));

@@ -6,7 +6,7 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,9 +40,9 @@ public class AddressController {
 		this.addressService = addressService;
 	}
 
-	private UUID getCustomerUuid(@AuthenticationPrincipal UserDetails userDetails) {
+	private UUID getCustomerUuid(@AuthenticationPrincipal Jwt jwt) {
 		try {
-			return UUID.fromString(userDetails.getUsername());
+			return UUID.fromString(jwt.getSubject());
 		} catch (IllegalArgumentException e) {
 			throw new CustomerException(CustomerErrorCode.INVALID_CUSTOMER_ID);
 		}
@@ -56,8 +56,8 @@ public class AddressController {
 	@GetMapping
 	@ResponseStatus(HttpStatus.OK)
 	public com.eatcloud.customerservice.common.ApiResponse<List<AddressResponseDto>> getAddressList(
-		@AuthenticationPrincipal UserDetails userDetails) {
-		UUID customerId = getCustomerUuid(userDetails);
+		@AuthenticationPrincipal Jwt jwt) {
+		UUID customerId = getCustomerUuid(jwt);
 		List<AddressResponseDto> addresses = addressService.getAddressList(customerId);
 		return com.eatcloud.customerservice.common.ApiResponse.success(addresses);
 	}
@@ -71,9 +71,9 @@ public class AddressController {
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	public com.eatcloud.customerservice.common.ApiResponse<List<AddressResponseDto>> createAddress(
-		@AuthenticationPrincipal UserDetails userDetails,
+		@AuthenticationPrincipal Jwt jwt,
 		@Valid @RequestBody AddressRequestDto request) {
-		UUID customerId = getCustomerUuid(userDetails);
+		UUID customerId = getCustomerUuid(jwt);
 		AddressResponseDto response = addressService.createAddress(customerId, request);
 		return com.eatcloud.customerservice.common.ApiResponse.created(Collections.singletonList(response));
 	}
@@ -88,10 +88,10 @@ public class AddressController {
 	@PutMapping("/{addressId}")
 	@ResponseStatus(HttpStatus.OK)
 	public com.eatcloud.customerservice.common.ApiResponse<List<AddressResponseDto>> updateAddress(
-		@AuthenticationPrincipal UserDetails userDetails,
+		@AuthenticationPrincipal Jwt jwt,
 		@PathVariable UUID addressId,
 		@Valid @RequestBody AddressRequestDto request) {
-		UUID customerId = getCustomerUuid(userDetails);
+		UUID customerId = getCustomerUuid(jwt);
 		AddressResponseDto response = addressService.updateAddress(customerId, addressId, request);
 		return com.eatcloud.customerservice.common.ApiResponse.success(Collections.singletonList(response));
 	}
@@ -105,9 +105,9 @@ public class AddressController {
 	@DeleteMapping("/{addressId}")
 	@ResponseStatus(HttpStatus.OK)
 	public com.eatcloud.customerservice.common.ApiResponse<ResponseMessage> deleteAddress(
-		@AuthenticationPrincipal UserDetails userDetails,
+		@AuthenticationPrincipal Jwt jwt,
 		@PathVariable UUID addressId) {
-		UUID customerId = getCustomerUuid(userDetails);
+		UUID customerId = getCustomerUuid(jwt);
 		addressService.deleteAddress(customerId, addressId);
 		return com.eatcloud.customerservice.common.ApiResponse.success(ResponseMessage.ADDRESS_DELETE_SUCCESS);
 	}
@@ -121,9 +121,9 @@ public class AddressController {
 	@PutMapping("/{addressId}/select")
 	@ResponseStatus(HttpStatus.OK)
 	public com.eatcloud.customerservice.common.ApiResponse<ResponseMessage> setDefaultAddress(
-		@AuthenticationPrincipal UserDetails userDetails,
+		@AuthenticationPrincipal Jwt jwt,
 		@PathVariable UUID addressId) {
-		UUID customerId = getCustomerUuid(userDetails);
+		UUID customerId = getCustomerUuid(jwt);
 		addressService.setDefaultAddress(customerId, addressId);
 		return com.eatcloud.customerservice.common.ApiResponse.success(ResponseMessage.ADDRESS_SELECT_SUCCESS);
 	}
