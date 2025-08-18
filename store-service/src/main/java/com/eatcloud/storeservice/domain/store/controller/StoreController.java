@@ -44,4 +44,6 @@ public class StoreController {
 		return ApiResponse.success(stores);
 	}
 
+	// 키워드 검색
+	// 필터 정렬
 }
