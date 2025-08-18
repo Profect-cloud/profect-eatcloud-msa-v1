@@ -58,9 +58,15 @@ public class GlobalExceptionHandler {
 		StoreErrorCode errorCode = ex.getErrorCode();
 
 		ApiResponseStatus status = switch (errorCode) {
-			case STORE_NOT_FOUND -> ApiResponseStatus.NOT_FOUND;
-			case STORE_ALREADY_REGISTERED, STORE_APPLICATION_PENDING, STORE_ALREADY_CLOSED -> ApiResponseStatus.BAD_REQUEST;
+			case STORE_NOT_FOUND,
+				 CATEGORY_NOT_FOUND -> ApiResponseStatus.NOT_FOUND;
+
+			case STORE_ALREADY_REGISTERED,
+				 STORE_APPLICATION_PENDING,
+				 STORE_ALREADY_CLOSED -> ApiResponseStatus.CONFLICT;
+
 			case NOT_AUTHORIZED -> ApiResponseStatus.FORBIDDEN;
+
 		};
 
 		return ResponseEntity.status(status.getHttpStatus())
