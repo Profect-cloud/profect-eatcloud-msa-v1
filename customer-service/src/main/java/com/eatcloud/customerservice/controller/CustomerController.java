@@ -1,0 +1,110 @@
+package com.eatcloud.customerservice.controller;
+
+import java.util.UUID;
+
+import com.eatcloud.customerservice.dto.SignupRequestDto;
+import com.eatcloud.customerservice.dto.UserDto;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.*;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import com.eatcloud.customerservice.dto.request.CustomerProfileUpdateRequestDto;
+import com.eatcloud.customerservice.dto.request.CustomerWithdrawRequestDto;
+import com.eatcloud.customerservice.dto.response.CustomerProfileResponseDto;
+import com.eatcloud.customerservice.exception.CustomerErrorCode;
+import com.eatcloud.customerservice.exception.CustomerException;
+import com.eatcloud.customerservice.message.ResponseMessage;
+import com.eatcloud.customerservice.service.CustomerService;
+
+@RestController
+@RequestMapping("/api/v1/customers")
+@Tag(name = "3-1. CustomerController", description = "고객 프로필 관리 API")
+public class CustomerController {
+
+	private final CustomerService customerService;
+
+	public CustomerController(CustomerService customerService) {
+		this.customerService = customerService;
+	}
+
+	private UUID getCustomerUuid(@AuthenticationPrincipal UserDetails userDetails) {
+		try {
+			return UUID.fromString(userDetails.getUsername());
+		} catch (IllegalArgumentException e) {
+			throw new CustomerException(CustomerErrorCode.INVALID_CUSTOMER_ID);
+		}
+	}
+
+	@Operation(summary = "1. 고객 프로필 조회", description = "인증된 고객의 프로필 정보를 조회합니다.")
+	@ApiResponses({
+		@ApiResponse(responseCode = "200", description = "조회 성공"),
+		@ApiResponse(responseCode = "400", description = "잘못된 고객 ID"),
+		@ApiResponse(responseCode = "401", description = "인증 실패"),
+		@ApiResponse(responseCode = "404", description = "고객을 찾을 수 없음")
+	})
+	@GetMapping("/profile")
+	@ResponseStatus(HttpStatus.OK)
+	public com.eatcloud.customerservice.common.ApiResponse<CustomerProfileResponseDto> getCustomer(
+		@AuthenticationPrincipal UserDetails userDetails) {
+
+		UUID customerId = getCustomerUuid(userDetails);
+		CustomerProfileResponseDto response = customerService.getCustomerProfile(customerId);
+		return com.eatcloud.customerservice.common.ApiResponse.success(response);
+	}
+
+	@Operation(summary = "2. 고객 프로필 수정", description = "인증된 고객의 프로필 정보를 수정합니다.")
+	@ApiResponses({
+		@ApiResponse(responseCode = "200", description = "수정 성공"),
+		@ApiResponse(responseCode = "400", description = "잘못된 요청 데이터"),
+		@ApiResponse(responseCode = "401", description = "인증 실패"),
+		@ApiResponse(responseCode = "404", description = "고객을 찾을 수 없음"),
+		@ApiResponse(responseCode = "409", description = "이메일 또는 닉네임 중복")
+	})
+	@PatchMapping("/profile")
+	@ResponseStatus(HttpStatus.OK)
+	public com.eatcloud.customerservice.common.ApiResponse<ResponseMessage> updateCustomer(
+		@AuthenticationPrincipal UserDetails userDetails,
+		@Valid @RequestBody CustomerProfileUpdateRequestDto request) {
+
+		UUID customerId = getCustomerUuid(userDetails);
+		customerService.updateCustomer(customerId, request);
+		return com.eatcloud.customerservice.common.ApiResponse.success(ResponseMessage.PROFILE_UPDATE_SUCCESS);
+	}
+
+	@Operation(summary = "3. 고객 탈퇴", description = "인증된 고객이 서비스에서 탈퇴합니다.")
+	@ApiResponses({
+		@ApiResponse(responseCode = "200", description = "탈퇴 성공"),
+		@ApiResponse(responseCode = "400", description = "잘못된 요청 데이터 또는 탈퇴 사유 누락"),
+		@ApiResponse(responseCode = "401", description = "인증 실패"),
+		@ApiResponse(responseCode = "404", description = "고객을 찾을 수 없음")
+	})
+	@PostMapping("/withdraw")
+	@ResponseStatus(HttpStatus.OK)
+	public com.eatcloud.customerservice.common.ApiResponse<ResponseMessage> withdrawCustomer(
+		@AuthenticationPrincipal UserDetails userDetails,
+		@Valid @RequestBody CustomerWithdrawRequestDto request) {
+
+		UUID customerId = getCustomerUuid(userDetails);
+		customerService.withdrawCustomer(customerId, request);
+		return com.eatcloud.customerservice.common.ApiResponse.success(ResponseMessage.CUSTOMER_WITHDRAW_SUCCESS);
+	}
+
+	@GetMapping("/search")
+	public ResponseEntity<UserDto> searchByEmail(@RequestParam String email) {
+		UserDto userDto = customerService.findByEmail(email);
+		return ResponseEntity.ok(userDto);
+	}
+
+	@PostMapping("/signup")
+	public ResponseEntity<Void> signup(@RequestBody SignupRequestDto request) {
+		customerService.signup(request);
+		return ResponseEntity.ok().build();
+	}
+}
