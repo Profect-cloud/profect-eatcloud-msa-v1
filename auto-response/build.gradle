@@ -1,0 +1,45 @@
+plugins {
+    id "java-library"
+}
+
+group = 'com.eatcloud'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+    withSourcesJar()
+    withJavadocJar()
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Boot 3.5.3 BOM (스프링 생태계 버전 정합성)
+    api(platform("org.springframework.boot:spring-boot-dependencies:3.5.3"))
+
+    // 공개 API에 노출(JpaRepository 상속) → api
+    api("org.springframework.data:spring-data-jpa")
+
+    // 컴파일만 필요(런타임은 소비자 앱이 가짐)
+    compileOnly("org.springframework.boot:spring-boot-autoconfigure")
+    compileOnly("org.springframework.boot:spring-boot-starter-web")
+    compileOnly 'org.projectlombok:lombok:1.18.34'
+    annotationProcessor 'org.projectlombok:lombok:1.18.34'
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.security:spring-security-core")
+
+    implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
+}
+
+tasks.matching { it.name == "bootJar" }.configureEach { enabled = false }
+tasks.named("jar").configure {
+    enabled = true
+} // 라이브러리 JAR
+tasks.withType(Javadoc).configureEach {
+    options.addBooleanOption('Xdoclint:none', true) // 문서 검사 완화
+    failOnError = false                              // 경고를 에러로 취급하지 않음
+}

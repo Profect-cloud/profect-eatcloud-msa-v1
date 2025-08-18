@@ -11,4 +11,4 @@ include 'order-service'
 include 'payment-service'
 
 include 'auto-time'
-//include 'auto-response'
+include 'auto-response'

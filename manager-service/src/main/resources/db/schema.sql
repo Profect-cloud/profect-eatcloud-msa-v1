@@ -1,11 +1,18 @@
--- MANAGERS service
+CREATE TABLE IF NOT EXISTS p_managers (
+    id           UUID PRIMARY KEY,
+    username     VARCHAR(20)  NOT NULL UNIQUE,
+    email        VARCHAR(255) NOT NULL UNIQUE,
+    password     VARCHAR(255) NOT NULL,
+    phone_number VARCHAR(18),
+    position     VARCHAR(50),
 
-CREATE TABLE p_managers (
-  id           UUID PRIMARY KEY,
-  name         VARCHAR(20) UNIQUE NOT NULL,
-  email        VARCHAR(255)       NOT NULL,
-  password     VARCHAR(255)       NOT NULL,
-  phone_number VARCHAR(18),
-  store_id     UUID,  -- 논리참조: stores.p_stores.store_id
-  p_time_id    UUID   NOT NULL    -- FK 제거됨
+    -- audit & soft-delete (auto-time BaseTimeEntity와 매핑)
+    created_at   TIMESTAMP,
+    created_by   VARCHAR(50),
+    updated_at   TIMESTAMP,
+    updated_by   VARCHAR(50),
+    deleted_at   TIMESTAMP,
+    deleted_by   VARCHAR(50)
 );
+
+CREATE INDEX IF NOT EXISTS idx_p_managers_deleted_at ON p_managers(deleted_at);
