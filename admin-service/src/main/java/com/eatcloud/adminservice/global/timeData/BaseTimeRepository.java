@@ -1,8 +1,8 @@
 package com.eatcloud.adminservice.global.timeData;
 
+import com.eatcloud.adminservice.global.timeData.BaseTimeEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.repository.NoRepositoryBean;
-import profect.eatcloud.security.SecurityUtil;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,8 +21,7 @@ public interface BaseTimeRepository<T extends BaseTimeEntity, ID> extends JpaRep
 	@Override
 	default void delete(T entity) {
 		if (entity != null && entity.getTimeData() != null) {
-			String user = SecurityUtil.getCurrentUsername();
-			softDeleteByTimeId(entity.getTimeData().getPTimeId(), LocalDateTime.now(), user);
+			softDeleteByTimeId(entity.getTimeData().getPTimeId(), LocalDateTime.now(), "system");
 		}
 	}
 
@@ -30,30 +29,27 @@ public interface BaseTimeRepository<T extends BaseTimeEntity, ID> extends JpaRep
 	default void deleteById(ID id) {
 		Optional<T> entity = findByIdIncludingDeleted(id);
 		if (entity.isPresent() && entity.get().getTimeData() != null) {
-			String user = SecurityUtil.getCurrentUsername();
-			softDeleteByTimeId(entity.get().getTimeData().getPTimeId(), LocalDateTime.now(), user);
+			softDeleteByTimeId(entity.get().getTimeData().getPTimeId(), LocalDateTime.now(), "system");
 		}
 	}
 
 	@Override
 	default void deleteAll(Iterable<? extends T> entities) {
-		String user = SecurityUtil.getCurrentUsername();
 		LocalDateTime now = LocalDateTime.now();
-		entities.forEach(entity -> {
+		for (T entity : entities) {
 			if (entity != null && entity.getTimeData() != null) {
-				softDeleteByTimeId(entity.getTimeData().getPTimeId(), now, user);
+				softDeleteByTimeId(entity.getTimeData().getPTimeId(), now, "system");
 			}
-		});
+		}
 	}
 
 	@Override
 	default void deleteAll() {
-		String user = SecurityUtil.getCurrentUsername();
 		LocalDateTime now = LocalDateTime.now();
-		findAll().forEach(entity -> {
+		for (T entity : findAll()) {
 			if (entity != null && entity.getTimeData() != null) {
-				softDeleteByTimeId(entity.getTimeData().getPTimeId(), now, user);
+				softDeleteByTimeId(entity.getTimeData().getPTimeId(), now, "system");
 			}
-		});
+		}
 	}
 }
