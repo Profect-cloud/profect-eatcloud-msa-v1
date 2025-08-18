@@ -123,6 +123,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
       EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka
+      JWT_SECRET: bL3eq0LvdqK92dOj+6cTVtzcEHTPf9+Utw7R+3T01lbXWvksn6FezIjaNVQgEGkD
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -194,7 +195,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-devpassword123}
       REDIS_HOST: redis
       EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka
-      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-must-be-at-least-32-characters}
+      JWT_SECRET: bL3eq0LvdqK92dOj+6cTVtzcEHTPf9+Utw7R+3T01lbXWvksn6FezIjaNVQgEGkD
     depends_on:
       eatcloud-db:
         condition: service_healthy
@@ -208,7 +209,7 @@ services:
       dockerfile: customer-service/Dockerfile
     container_name: customer-service
     ports:
-      - "8082:8080"
+      - "8082:8081"
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
       DB_HOST: eatcloud-db

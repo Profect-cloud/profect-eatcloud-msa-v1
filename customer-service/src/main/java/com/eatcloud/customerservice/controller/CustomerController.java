@@ -112,9 +112,9 @@ public class CustomerController {
 
 	@PutMapping("/change-password")
 	public ResponseEntity<String> changePassword(
-		@RequestBody UUID customerId, // 인증 사용자로 변경 필요
+		@AuthenticationPrincipal UserDetails userDetails,
 		@RequestBody ChangePasswordRequestDto request) {
-
+		UUID customerId = getCustomerUuid(userDetails);
 		customerService.changePassword(customerId, request);
 		return ResponseEntity.ok("비밀번호가 변경되었습니다.");
 	}

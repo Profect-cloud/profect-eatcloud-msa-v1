@@ -1,5 +1,6 @@
 package com.eatcloud.apigateway.config;
 
+import com.eatcloud.apigateway.filter.JwtAuthenticationFilter;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -16,13 +17,17 @@ public class JwtConfig {
 	@Bean
 	public Key jwtSigningKey(JwtProperties props) {
 		String secret = props.getSecret();
-		byte[] keyBytes = looksLikeBase64(secret) ? Decoders.BASE64.decode(secret) : secret.getBytes(StandardCharsets.UTF_8);
-		return Keys.hmacShaKeyFor(keyBytes);
+		return Keys.hmacShaKeyFor(secret.getBytes());
 	}
 
 	@Bean
 	public io.jsonwebtoken.JwtParser jwtParser(Key jwtSigningKey) {
 		return Jwts.parserBuilder().setSigningKey(jwtSigningKey).build();
+	}
+
+	@Bean
+	public JwtAuthenticationFilter jwtAuthenticationFilter(io.jsonwebtoken.JwtParser jwtParser) {
+		return new JwtAuthenticationFilter(jwtParser);
 	}
 
 	private boolean looksLikeBase64(String value) {

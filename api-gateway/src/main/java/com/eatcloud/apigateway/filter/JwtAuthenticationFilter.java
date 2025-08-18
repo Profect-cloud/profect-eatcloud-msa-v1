@@ -16,16 +16,16 @@ import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
-import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.security.Key;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import jakarta.annotation.PostConstruct;
+import org.springframework.stereotype.Component;
 
 
-@Component
 @Slf4j
 public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
@@ -35,9 +35,16 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 		this.jwtParser = jwtParser;
 	}
 
+	@PostConstruct
+	public void init() {
+		log.info("🚀 JwtAuthenticationFilter initialized with order: {}", getOrder());
+		log.info("🚀 JwtAuthenticationFilter is ready to process requests");
+		log.info("🚀 JwtAuthenticationFilter package: {}", this.getClass().getPackage().getName());
+	}
+
 	@Override
 	public int getOrder() {
-		return -100;
+		return 0;
 	}
 
 	@Override
@@ -46,7 +53,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 		String path = request.getPath().value();
 		String method = request.getMethod().name();
 
-		log.debug("🔍 Processing request: {} {}", method, path);
+		log.info("🔍 JWT Filter [Order: {}] - Processing request: {} {}", getOrder(), method, path);
 
 		if ("OPTIONS".equalsIgnoreCase(method)) {
 			log.debug("✅ CORS preflight request, skipping JWT validation: {} {}", method, path);
@@ -58,9 +65,11 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 			return chain.filter(exchange);
 		}
 
-		log.debug("🔐 Protected path, JWT validation required: {}", path);
+		log.info("🔐 Protected path, JWT validation required: {}", path);
 
 		String token = extractToken(request);
+		log.info("🔍 JWT Filter - Extracted token: {}", token != null ? token.substring(0, Math.min(20, token.length())) + "..." : "null");
+		
 		if (token == null) {
 			log.warn("❌ Missing Authorization header for protected path: {}", path);
 			return sendErrorResponse(exchange, "Missing or invalid Authorization header", HttpStatus.UNAUTHORIZED);
@@ -153,7 +162,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 	private String extractToken(ServerHttpRequest request) {
 		String authHeader = request.getHeaders().getFirst("Authorization");
 		if (authHeader != null && authHeader.startsWith("Bearer ")) {
-			return authHeader.substring(7);
+			return authHeader.substring(7).trim();
 		}
 		return null;
 	}
