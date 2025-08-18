@@ -28,7 +28,7 @@ jar {
 
 // Spring Cloud BOM 버전 관리 (Spring Boot 3.5.3과 호환)
 ext {
-    springCloudVersion = '2024.0.0'
+    springCloudVersion = '2025.0.0'
 }
 
 dependencyManagement {

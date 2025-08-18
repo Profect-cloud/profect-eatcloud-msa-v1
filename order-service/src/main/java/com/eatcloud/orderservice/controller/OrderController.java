@@ -9,6 +9,7 @@ import java.util.UUID;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -32,27 +33,26 @@ import org.springframework.web.bind.annotation.PostMapping;
 @RequestMapping("/orders")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "Order Service", description = "주문 서비스 API")
 public class OrderController {
 
 	private final OrderService orderService;
 
-	@PostMapping
-	public ResponseEntity<ApiResponse<CreateOrderResponse>> createOrder(
-			@RequestHeader("X-User-Id") String userId,
-			@RequestBody CreateOrderRequest request) {
-
-		try {
-			UUID customerId = UUID.fromString(userId);
-			CreateOrderResponse response = orderService.createOrderFromCart(customerId, request);
-			return ResponseEntity.ok(ApiResponse.success(response));
-		} catch (IllegalArgumentException e) {
-			log.error("Invalid user ID format: {}", userId);
-			return ResponseEntity.badRequest()
-				.body(ApiResponse.error("유효하지 않은 사용자 ID입니다."));
-		}
-		// OrderException과 CartException은 GlobalExceptionHandler에서 처리
-	}
+	// @PostMapping
+	// public ResponseEntity<ApiResponse<CreateOrderResponse>> createOrder(
+	// 		@RequestHeader("X-User-Id") String userId,
+	// 		@RequestBody CreateOrderRequest request) {
+	//
+	// 	try {
+	// 		UUID customerId = UUID.fromString(userId);
+	// 		CreateOrderResponse response = orderService.createOrderFromCart(customerId, request);
+	// 		return ResponseEntity.ok(ApiResponse.success(response));
+	// 	} catch (IllegalArgumentException e) {
+	// 		log.error("Invalid user ID format: {}", userId);
+	// 		return ResponseEntity.badRequest()
+	// 			.body(ApiResponse.error("유효하지 않은 사용자 ID입니다."));
+	// 	}
+	// 	// OrderException과 CartException은 GlobalExceptionHandler에서 처리
+	// }
 
 	@GetMapping("/{orderId}")
 	public ResponseEntity<Map<String, Object>> getOrder(@PathVariable UUID orderId) {

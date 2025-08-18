@@ -27,7 +27,7 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final PaymentRequestRepository paymentRequestRepository;
     private final TossPaymentService tossPaymentService;
-    private final PaymentEventProducer paymentEventProducer;
+    // private final PaymentEventProducer paymentEventProducer;
     
     private static final long PAYMENT_TIMEOUT_MINUTES = 5;
     
@@ -66,7 +66,6 @@ public class PaymentService {
         Map<String, Object> tossResponse = tossPaymentService.confirmPayment(paymentKey, orderId, amount);
         
         PaymentRequest paymentRequest = paymentRequestRepository.findByOrderId(UUID.fromString(orderId))
-        PaymentRequest paymentRequest = paymentRequestRepository.findByOrderId(UUID.fromString(orderId))
                 .orElseThrow(() -> new RuntimeException("결제 요청을 찾을 수 없습니다: " + orderId));
         
         Payment payment = Payment.builder()
@@ -86,7 +85,6 @@ public class PaymentService {
         paymentRequestRepository.save(paymentRequest);
         
         PaymentCreatedEvent event = PaymentCreatedEvent.builder()
-        PaymentCreatedEvent event = PaymentCreatedEvent.builder()
                 .paymentId(savedPayment.getPaymentId())
                 .orderId(savedPayment.getOrderId())
                 .customerId(savedPayment.getCustomerId())
@@ -97,7 +95,7 @@ public class PaymentService {
                 .createdAt(savedPayment.getCreatedAt())
                 .build();
         
-        paymentEventProducer.publishPaymentCreated(event);
+        // paymentEventProducer.publishPaymentCreated(event);
         
         log.info("결제 승인 완료: paymentId={}, orderId={}", savedPayment.getPaymentId(), orderId);
         

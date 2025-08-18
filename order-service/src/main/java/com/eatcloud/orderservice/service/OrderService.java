@@ -13,6 +13,7 @@ import com.eatcloud.orderservice.repository.OrderStatusCodeRepository;
 import com.eatcloud.orderservice.repository.OrderTypeCodeRepository;
 import com.eatcloud.orderservice.exception.OrderException;
 import com.eatcloud.orderservice.exception.ErrorCode;
+import org.springframework.context.annotation.Lazy;
 
 import com.eatcloud.orderservice.dto.CartItem;
 import com.eatcloud.orderservice.dto.request.CreateOrderRequest;
@@ -36,19 +37,21 @@ public class OrderService {
     private final OrderTypeCodeRepository orderTypeCodeRepository;
     private final ExternalApiService externalApiService;
     private final DistributedLockService distributedLockService;
-    private final SagaOrchestrator sagaOrchestrator;
+    @Lazy
+    // private final SagaOrchestrator sagaOrchestrator;
 
     @Autowired
     private CartService cartService;
+
 
     /**
      * 장바구니에서 주문 생성 - Saga 패턴 적용
      * 분산 트랜잭션으로 처리하여 일관성 보장
      */
-    public CreateOrderResponse createOrderFromCart(UUID customerId, CreateOrderRequest request) {
-        // Saga 패턴을 통한 분산 트랜잭션 처리
-        return sagaOrchestrator.createOrderSaga(customerId, request);
-    }
+    // public CreateOrderResponse createOrderFromCart(UUID customerId, CreateOrderRequest request) {
+    //     // Saga 패턴을 통한 분산 트랜잭션 처리
+    //     return sagaOrchestrator.createOrderSaga(customerId, request);
+    // }
 
     /**
      * 레거시 메서드 - 단순 분산락만 사용하는 버전
