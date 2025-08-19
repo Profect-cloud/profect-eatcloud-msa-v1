@@ -6,7 +6,7 @@ import com.eatcloud.adminservice.domain.admin.entity.ManagerStoreApplication;
 import com.eatcloud.adminservice.domain.admin.exception.AdminErrorCode;
 import com.eatcloud.adminservice.domain.admin.exception.AdminException;
 import com.eatcloud.adminservice.domain.admin.repository.ManagerStoreApplicationRepository;
-import com.eatcloud.adminservice.domain.globalCategory.repository.StoreCategoryRepository;
+import com.eatcloud.adminservice.domain.category.repository.StoreCategoryRepository;
 import com.eatcloud.adminservice.ports.CreateStoreCommand;
 import com.eatcloud.adminservice.ports.ManagerAdminPort;
 import com.eatcloud.adminservice.ports.ManagerUpsertCommand;

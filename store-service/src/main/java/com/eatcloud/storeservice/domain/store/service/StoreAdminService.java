@@ -4,8 +4,7 @@ import com.eatcloud.storeservice.domain.store.entity.Store;
 import com.eatcloud.storeservice.domain.store.exception.StoreErrorCode;
 import com.eatcloud.storeservice.domain.store.exception.StoreException;
 import com.eatcloud.storeservice.domain.store.repository.StoreRepository;
-import com.eatcloud.storeservice.globalCategory.entity.StoreCategory;
-import com.eatcloud.storeservice.globalCategory.repository.StoreCategoryRepository;
+import com.eatcloud.storeservice.external.admin.AdminCategoryPort;
 import com.eatcloud.storeservice.internal.dto.CloseStoreCommand;
 import com.eatcloud.storeservice.internal.dto.CreateStoreCommand;
 import lombok.RequiredArgsConstructor;
@@ -23,49 +22,38 @@ import java.util.UUID;
 public class StoreAdminService {
 
     private final StoreRepository storeRepository;
-    private final StoreCategoryRepository categoryRepository;
-
+    private final AdminCategoryPort adminCategoryPort; // ✅ 변경
     /**
      * 멱등: applicationKey가 있으면 같은 키로 이미 생성된 스토어를 반환
      */
     public UUID createStore(CreateStoreCommand cmd, UUID applicationKey) {
-        // 1) 멱등 조회
         if (applicationKey != null) {
-            Optional<Store> already = storeRepository.findByApplicationId(applicationKey);
-            if (already.isPresent()) {
-                return already.get().getStoreId();
-            }
+            return storeRepository.findByApplicationId(applicationKey)
+                    .map(Store::getStoreId)
+                    .orElse(null);
         }
 
-        // 2) 카테고리 확인 (nullable 허용이면 조건부)
-        StoreCategory category = null;
-        if (cmd.getCategoryId() != null) {
-            category = categoryRepository.findById(cmd.getCategoryId())
-                    .orElseThrow(() -> new StoreException(StoreErrorCode.CATEGORY_NOT_FOUND));
-        }
+        Integer catId = cmd.getStoreCategoryId();
 
-        // 3) 엔티티 생성 (초기 미오픈)
+
         Store store = Store.builder()
                 .storeName(cmd.getStoreName())
                 .storeAddress(cmd.getStoreAddress())
                 .phoneNumber(cmd.getStorePhoneNumber())
-                .storeCategory(category)
+                .storeCategoryId(catId)     // ✅ 정수 ID 저장
                 .managerId(cmd.getManagerId())
                 .minCost(0)
                 .description(cmd.getDescription())
                 .openStatus(false)
                 .openTime(LocalTime.of(0, 0))
                 .closeTime(LocalTime.of(0, 0))
+                .applicationId(applicationKey)
                 .build();
 
-        store.setApplicationId(applicationKey);
-
-        // 4) 저장 (+동시성 대비)
         try {
             storeRepository.save(store);
             return store.getStoreId();
         } catch (DataIntegrityViolationException dup) {
-            // application_id UNIQUE 충돌 케이스 → 기존 것 반환
             return storeRepository.findByApplicationId(applicationKey)
                     .orElseThrow(() -> dup)
                     .getStoreId();
