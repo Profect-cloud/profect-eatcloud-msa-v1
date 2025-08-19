@@ -14,6 +14,8 @@ public class CreateStoreCommand {
     private String storeName;
     private String storeAddress;
     private String storePhoneNumber;
-    private Integer categoryId;        // null 허용 가능
+    private Integer storeCategoryId;        // null 허용 가능
     private String description;
+
+
 }

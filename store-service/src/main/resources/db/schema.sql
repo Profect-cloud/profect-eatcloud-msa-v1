@@ -1,12 +1,12 @@
 -- STORES service
--- PostGIS 타입 사용 시: CREATE EXTENSION IF NOT EXISTS postgis; (DB 레벨)
+CREATE EXTENSION IF NOT EXISTS postgis;
 
 CREATE TABLE p_stores (
   store_id      UUID PRIMARY KEY,
   store_name    VARCHAR(200) NOT NULL,
   store_address VARCHAR(300),
   phone_number  VARCHAR(18),
-  category_id   UUID NOT NULL,   -- 논리참조: admin.p_categories.category_id
+  category_id   INTEGER NOT NULL,   -- 논리참조: admin.p_categories.category_id
   min_cost      INTEGER      NOT NULL DEFAULT 0,
   description   TEXT,
   store_lat     DOUBLE PRECISION,
@@ -23,7 +23,7 @@ CREATE TABLE p_menus (
   store_id         UUID         NOT NULL,
   menu_num         INTEGER      NOT NULL,
   menu_name        VARCHAR(200) NOT NULL,
-  menu_category_id INT          NOT NULL,  -- 논리참조: admin.p_menu_category.menu_category_id
+  menu_category_code  VARCHAR(30) NOT NULL,  -- 논리참조: admin.p_menu_category.menu_category_id
   price            INTEGER      NOT NULL,
   description      TEXT,
   is_available     BOOLEAN      NOT NULL DEFAULT true,
@@ -32,7 +32,7 @@ CREATE TABLE p_menus (
 );
 ALTER TABLE p_menus
   ADD CONSTRAINT fk_menu_store FOREIGN KEY (store_id) REFERENCES p_stores (store_id);
-CREATE INDEX idx_menus_store_category ON p_menus(store_id, menu_category_id);
+CREATE INDEX idx_menus_store_category ON p_menus(store_id, menu_category_code);
 
 CREATE TABLE delivery_areas (
   area_id   UUID PRIMARY KEY,

@@ -31,7 +31,10 @@ public class Menu extends BaseTimeEntity {
     @Column(name = "menu_name", nullable = false, length = 200)
     private String menuName;
 
-    @Column(name = "menu_category_code", nullable = false, length = 30)
+//    @Column(name = "menu_category_id", nullable = false)
+//    private Integer menuCategoryId;
+
+    @Column(name = "menu_category_code", nullable = false, length = 100)
     private String menuCategoryCode;
 
     @Column(name = "price", nullable = false, precision = 10, scale = 2)

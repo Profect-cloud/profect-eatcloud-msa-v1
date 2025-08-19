@@ -1,12 +1,11 @@
 package com.eatcloud.storeservice.domain.store.entity;
 
 import com.eatcloud.storeservice.global.timeData.BaseTimeEntity;
-import com.eatcloud.storeservice.globalCategory.entity.StoreCategory;
+
 import jakarta.persistence.*;
 import lombok.*;
+import org.locationtech.jts.geom.Point;
 
-
-import java.awt.*;
 import java.time.LocalTime;
 import java.util.UUID;
 
@@ -65,8 +64,7 @@ public class Store extends BaseTimeEntity {
     @Column(name = "close_time", nullable = false)
     private LocalTime closeTime;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")
-    private StoreCategory storeCategory;
+    @Column(name = "store_category_id", nullable = false)
+    private Integer storeCategoryId;
 
 }
