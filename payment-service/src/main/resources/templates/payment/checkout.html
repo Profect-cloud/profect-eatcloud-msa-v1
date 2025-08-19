@@ -292,7 +292,7 @@
             </div>
             
             <!-- 결제하기 버튼 -->
-            <button class="pay-button" onclick="requestPayment()">
+            <button id="payButton" class="pay-button" type="button">
                 <span th:text="${amount + '원 결제하기'}">1,000원 결제하기</span>
             </button>
             
@@ -310,7 +310,11 @@
         const userId = /*[[${userId}]]*/ 'user_123';
         // 이미 결제가 성공한 ORDER_ID의 경우, '일시적인 오류'가 뜹니다.
         // 그렇기 때문에 테스트를 위해 임의로 주문 ID를 설정합니다.
-        const orderId = /*[[${orderId}]]*/ 'ORDER_' + Math.random().toString(36).substring(2, 15);
+        const serverOrderIdRaw = '[[${orderId}]]';
+        const orderId = (serverOrderIdRaw && serverOrderIdRaw !== 'null'
+            ? serverOrderIdRaw.replace(/^\"|\"$/g, '')
+            : ('ORDER_' + Math.random().toString(36).substring(2, 15))
+        );
         const amount = /*[[${amount}]]*/ 1;
         
         console.log('=== 결제 페이지 초기화 ===');
@@ -322,28 +326,35 @@
         // 선택된 결제 수단
         let selectedPaymentMethod = 'CARD';
         
-        // 토스페이먼츠 v2/standard SDK 초기화
-        const tossPayments = TossPayments(clientKey);
-        
-        // 회원 결제용 payment 인스턴스 생성
-        const payment = tossPayments.payment({ customerKey: userId });
-        
-        // 결제 수단 선택 이벤트
-        document.querySelectorAll('.payment-method').forEach(method => {
-            method.addEventListener('click', function() {
-                // 이전 선택 해제
-                document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('selected'));
-                
-                // 새로운 선택 적용
-                this.classList.add('selected');
-                selectedPaymentMethod = this.getAttribute('data-method');
-                
-                console.log('결제 수단 선택:', selectedPaymentMethod);
+        // 결제 수단 선택 이벤트 (DOM 로드 후 바인딩)
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.payment-method').forEach(method => {
+                method.addEventListener('click', function() {
+                    // 이전 선택 해제
+                    document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('selected'));
+                    
+                    // 새로운 선택 적용
+                    this.classList.add('selected');
+                    selectedPaymentMethod = this.getAttribute('data-method');
+                    
+                    console.log('결제 수단 선택:', selectedPaymentMethod);
+                });
             });
+            // 버튼 클릭 이벤트 바인딩 (inline onclick 제거 대응)
+            var payBtn = document.getElementById('payButton');
+            if (payBtn) {
+                payBtn.addEventListener('click', function() {
+                    if (typeof window.requestPayment === 'function') {
+                        window.requestPayment();
+                    } else {
+                        alert('페이지가 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.');
+                    }
+                });
+            }
         });
         
-        // 결제 요청 함수
-        async function requestPayment() {
+        // 결제 요청 함수 (전역 바인딩)
+        window.requestPayment = async function() {
             console.log('=== 결제 요청 시작 ===');
             
             // 입력값 검증
@@ -376,7 +387,17 @@
                 console.log('이메일:', customerEmail);
                 console.log('휴대폰:', customerPhone);
                 
-                // v2/standard SDK의 올바른 결제 요청 방식
+                // SDK 로드 확인 후 인스턴스 생성
+                const tp = window.TossPayments ? TossPayments(clientKey) : null;
+                if (!tp) {
+                    alert('결제 SDK 로드에 실패했습니다. 잠시 후 다시 시도해주세요.');
+                    document.getElementById('loading').classList.remove('show');
+                    document.querySelector('.pay-button').disabled = false;
+                    return;
+                }
+                const payment = tp.payment({ customerKey: userId });
+
+                // v2/standard SDK 결제 요청
                 await payment.requestPayment({
                     method: selectedPaymentMethod,
                     amount: {
@@ -385,8 +406,8 @@
                     },
                     orderId: orderId,
                     orderName: "포인트 충전",
-                    successUrl: "http://localhost:8080/api/v1/payment/success",
-                    failUrl: "http://localhost:8080/api/v1/payment/fail",
+                    successUrl: window.location.origin + "/api/v1/payment/success",
+                    failUrl: window.location.origin + "/api/v1/payment/fail",
                     customerEmail: customerEmail,
                     customerName: customerName,
                     customerMobilePhone: customerPhone,
@@ -412,8 +433,7 @@
         // 페이지 로드 완료 시
         document.addEventListener('DOMContentLoaded', function() {
             console.log('결제 페이지 로드 완료');
-            console.log('TossPayments 인스턴스:', tossPayments);
-            console.log('Payment 인스턴스:', payment);
+            console.log('TossPayments 로드 상태:', typeof window.TossPayments !== 'undefined');
         });
     </script>
 </body>

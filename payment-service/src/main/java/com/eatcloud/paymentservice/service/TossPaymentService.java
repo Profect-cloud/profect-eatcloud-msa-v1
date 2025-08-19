@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Mono;
 
 import java.util.Base64;
 import java.util.Map;
@@ -38,12 +40,21 @@ public class TossPaymentService {
                     .header("Authorization", "Basic " + encodedAuth)
                     .bodyValue(request)
                     .retrieve()
+                    .onStatus(status -> status.isError(), clientResponse ->
+                            clientResponse.bodyToMono(String.class).flatMap(body -> {
+                                log.error("토스페이먼츠 결제 승인 오류: status={}, body={}", clientResponse.statusCode(), body);
+                                return Mono.error(new RuntimeException("TOSS_CONFIRM_ERROR: " + body));
+                            })
+                    )
                     .bodyToMono(Map.class)
                     .block();
-            
+
             log.info("토스페이먼츠 결제 승인 성공: orderId={}", orderId);
             return response;
-            
+
+        } catch (WebClientResponseException wce) {
+            log.error("토스페이먼츠 결제 승인 실패(HTTP): status={}, response={}", wce.getRawStatusCode(), wce.getResponseBodyAsString());
+            throw new RuntimeException("결제 승인 중 오류가 발생했습니다: " + wce.getResponseBodyAsString(), wce);
         } catch (Exception e) {
             log.error("토스페이먼츠 결제 승인 실패: orderId={}", orderId, e);
             throw new RuntimeException("결제 승인 중 오류가 발생했습니다: " + e.getMessage(), e);
