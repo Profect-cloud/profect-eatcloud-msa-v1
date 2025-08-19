@@ -1,11 +1,12 @@
 package com.eatcloud.paymentservice.service;
 
 import com.eatcloud.paymentservice.entity.Payment;
+import com.eatcloud.paymentservice.entity.PaymentMethodCode;
 import com.eatcloud.paymentservice.entity.PaymentRequest;
-import com.eatcloud.paymentservice.entity.PaymentMethod;
 import com.eatcloud.paymentservice.entity.PaymentStatus;
 import com.eatcloud.paymentservice.entity.PaymentRequestStatus;
 import com.eatcloud.paymentservice.event.PaymentCreatedEvent;
+import com.eatcloud.paymentservice.repository.PaymentMethodCodeRepository;
 import com.eatcloud.paymentservice.repository.PaymentRepository;
 import com.eatcloud.paymentservice.repository.PaymentRequestRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final PaymentRequestRepository paymentRequestRepository;
     private final TossPaymentService tossPaymentService;
+    private final PaymentMethodCodeRepository paymentMethodCodeRepository;
     // private final PaymentEventProducer paymentEventProducer;
     
     private static final long PAYMENT_TIMEOUT_MINUTES = 5;
@@ -90,9 +92,8 @@ public class PaymentService {
                 .customerId(savedPayment.getCustomerId())
                 .totalAmount(savedPayment.getTotalAmount())
                 .paymentStatus(savedPayment.getPaymentStatus().name())
-                .paymentMethod(savedPayment.getPaymentMethod().name())
+                .paymentMethod(savedPayment.getPaymentMethod().getCode())
                 .approvedAt(savedPayment.getApprovedAt())
-                .createdAt(savedPayment.getCreatedAt())
                 .build();
         
         // paymentEventProducer.publishPaymentCreated(event);
@@ -101,18 +102,24 @@ public class PaymentService {
         
         return savedPayment;
     }
-    
-    private PaymentMethod mapTossMethodToPaymentMethod(String tossMethod) {
-        if (tossMethod == null) return PaymentMethod.CARD;
-        
-        return switch (tossMethod) {
-            case "카드" -> PaymentMethod.CARD;
-            case "가상계좌" -> PaymentMethod.VIRTUAL_ACCOUNT;
-            case "계좌이체" -> PaymentMethod.TRANSFER;
-            case "휴대폰" -> PaymentMethod.PHONE;
-            case "상품권", "도서문화상품권", "게임문화상품권" -> PaymentMethod.GIFT_CERTIFICATE;
-            default -> PaymentMethod.CARD;
+
+    private PaymentMethodCode getMethodByCodeOrThrow(String code) {
+        return paymentMethodCodeRepository.findById(code)
+            .orElseThrow(() -> new IllegalStateException("결제수단 코드가 없습니다: " + code));
+    }
+
+    private PaymentMethodCode mapTossMethodToPaymentMethod(String tossMethod) {
+        if (tossMethod == null) return getMethodByCodeOrThrow("CARD");
+
+        String code = switch (tossMethod) {
+            case "카드" -> "CARD";
+            case "가상계좌" -> "VIRTUAL_ACCOUNT";
+            case "계좌이체" -> "TRANSFER";
+            case "휴대폰" -> "PHONE";
+            case "상품권", "도서문화상품권", "게임문화상품권" -> "GIFT_CERTIFICATE";
+            default -> "CARD";
         };
+        return getMethodByCodeOrThrow(code);
     }
     
     @Async
