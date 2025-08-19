@@ -52,7 +52,7 @@ public class AdminCategoryRestAdapter implements AdminCategoryPort {
     @Override
     public List<CategoryDto> listStoreCategories() {
         CategoryDto[] arr = adminClient.get()
-                .uri("/internal/admin/categories/store")
+                .uri("/internal/categories/store")
                 .retrieve()
                 .body(CategoryDto[].class);
         return arr == null ? List.of() : Arrays.asList(arr);
@@ -61,7 +61,7 @@ public class AdminCategoryRestAdapter implements AdminCategoryPort {
     @Override
     public List<CategoryDto> listMenuCategories() {
         CategoryDto[] arr = adminClient.get()
-                .uri("/internal/admin/categories/menu")
+                .uri("/internal/categories/menu")
                 .retrieve()
                 .body(CategoryDto[].class);
         return arr == null ? List.of() : Arrays.asList(arr);

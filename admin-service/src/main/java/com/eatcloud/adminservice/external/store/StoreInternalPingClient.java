@@ -1,5 +1,5 @@
 // admin-service
-package com.eatcloud.adminservice.adapters;
+package com.eatcloud.adminservice.external.store;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.ParameterizedTypeReference;
@@ -11,10 +11,10 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class StoreInternalPingClient {
-    private final RestClient storeInternalClient;
+    private final RestClient storeRestClient;
 
     public Map<String, Object> ping() {
-        return storeInternalClient.get()
+        return storeRestClient.get()
                 .uri("/internal/ping")
                 .retrieve()
                 .body(new ParameterizedTypeReference<>() {});
