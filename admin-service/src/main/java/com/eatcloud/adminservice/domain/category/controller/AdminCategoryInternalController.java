@@ -15,7 +15,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/internal/admin/categories")
+@RequestMapping("/internal/categories")
 public class AdminCategoryInternalController {
 
     private final StoreCategoryRepository storeRepo;

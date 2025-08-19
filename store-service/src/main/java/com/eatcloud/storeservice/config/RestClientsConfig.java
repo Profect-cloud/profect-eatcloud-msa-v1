@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 @Configuration
@@ -17,13 +18,14 @@ public class RestClientsConfig {
         return RestClient.builder();
     }
 
-    @Bean
-    @Qualifier("adminRestClient")
+    // 이름을 명시적으로 지정
+    @Bean(name = "adminRestClient")
     public RestClient adminRestClient(
-            @Value("${clients.admin.base-url:lb://admin-service}") String baseUrl,
+            @Value("${admin.base-url}") String baseUrl,
             RestClient.Builder builder
     ) {
-        // baseUrl 은 eureka 서비스명 사용
-        return builder.baseUrl(baseUrl).build();
+        return builder
+                .baseUrl(baseUrl)   // eureka(유레카) 사용할 땐: http://admin-service
+                .build();
     }
 }
