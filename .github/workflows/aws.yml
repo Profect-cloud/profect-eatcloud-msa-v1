@@ -168,6 +168,11 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
+    # 짧은 SHA 값을 별도 스텝에서 생성
+    - name: Generate short SHA
+      id: short-sha
+      run: echo "sha_short=$(echo ${{ github.sha }} | cut -c1-8)" >> $GITHUB_OUTPUT
+
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
@@ -177,7 +182,7 @@ jobs:
         tags: |
           ${{ env.ECR_REGISTRY }}/eatcloud/${{ matrix.service }}:latest
           ${{ env.ECR_REGISTRY }}/eatcloud/${{ matrix.service }}:${{ github.sha }}
-          ${{ env.ECR_REGISTRY }}/eatcloud/${{ matrix.service }}:$(echo ${{ github.sha }} | cut -c1-8)
+          ${{ env.ECR_REGISTRY }}/eatcloud/${{ matrix.service }}:${{ steps.short-sha.outputs.sha_short }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         platforms: linux/amd64
@@ -244,8 +249,3 @@ jobs:
         echo "1. Go to Actions tab"
         echo "2. Run 'Deploy to Production (ECR + ECS)' workflow"
         echo "3. Select services and image tag: ${{ github.sha }}"
-
- 
-            ]
-          }" \
-          ${{ secrets.SLACK_WEBHOOK_URL }}
