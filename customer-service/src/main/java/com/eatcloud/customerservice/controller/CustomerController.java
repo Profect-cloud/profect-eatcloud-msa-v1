@@ -7,7 +7,7 @@ import com.eatcloud.customerservice.dto.UserDto;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,6 +15,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+
+import com.eatcloud.customerservice.dto.request.ChangePasswordRequestDto;
 import com.eatcloud.customerservice.dto.request.CustomerProfileUpdateRequestDto;
 import com.eatcloud.customerservice.dto.request.CustomerWithdrawRequestDto;
 import com.eatcloud.customerservice.dto.response.CustomerProfileResponseDto;
@@ -34,9 +36,9 @@ public class CustomerController {
 		this.customerService = customerService;
 	}
 
-	private UUID getCustomerUuid(@AuthenticationPrincipal UserDetails userDetails) {
+	private UUID getCustomerUuid(@AuthenticationPrincipal Jwt jwt) {
 		try {
-			return UUID.fromString(userDetails.getUsername());
+			return UUID.fromString(jwt.getSubject());
 		} catch (IllegalArgumentException e) {
 			throw new CustomerException(CustomerErrorCode.INVALID_CUSTOMER_ID);
 		}
@@ -52,9 +54,9 @@ public class CustomerController {
 	@GetMapping("/profile")
 	@ResponseStatus(HttpStatus.OK)
 	public com.eatcloud.customerservice.common.ApiResponse<CustomerProfileResponseDto> getCustomer(
-		@AuthenticationPrincipal UserDetails userDetails) {
+		@AuthenticationPrincipal Jwt jwt) {
 
-		UUID customerId = getCustomerUuid(userDetails);
+		UUID customerId = getCustomerUuid(jwt);
 		CustomerProfileResponseDto response = customerService.getCustomerProfile(customerId);
 		return com.eatcloud.customerservice.common.ApiResponse.success(response);
 	}
@@ -70,10 +72,10 @@ public class CustomerController {
 	@PatchMapping("/profile")
 	@ResponseStatus(HttpStatus.OK)
 	public com.eatcloud.customerservice.common.ApiResponse<ResponseMessage> updateCustomer(
-		@AuthenticationPrincipal UserDetails userDetails,
+		@AuthenticationPrincipal Jwt jwt,
 		@Valid @RequestBody CustomerProfileUpdateRequestDto request) {
 
-		UUID customerId = getCustomerUuid(userDetails);
+		UUID customerId = getCustomerUuid(jwt);
 		customerService.updateCustomer(customerId, request);
 		return com.eatcloud.customerservice.common.ApiResponse.success(ResponseMessage.PROFILE_UPDATE_SUCCESS);
 	}
@@ -88,10 +90,10 @@ public class CustomerController {
 	@PostMapping("/withdraw")
 	@ResponseStatus(HttpStatus.OK)
 	public com.eatcloud.customerservice.common.ApiResponse<ResponseMessage> withdrawCustomer(
-		@AuthenticationPrincipal UserDetails userDetails,
+		@AuthenticationPrincipal Jwt jwt,
 		@Valid @RequestBody CustomerWithdrawRequestDto request) {
 
-		UUID customerId = getCustomerUuid(userDetails);
+		UUID customerId = getCustomerUuid(jwt);
 		customerService.withdrawCustomer(customerId, request);
 		return com.eatcloud.customerservice.common.ApiResponse.success(ResponseMessage.CUSTOMER_WITHDRAW_SUCCESS);
 	}
@@ -106,5 +108,14 @@ public class CustomerController {
 	public ResponseEntity<Void> signup(@RequestBody SignupRequestDto request) {
 		customerService.signup(request);
 		return ResponseEntity.ok().build();
+	}
+
+	@PutMapping("/change-password")
+	public ResponseEntity<String> changePassword(
+		@AuthenticationPrincipal Jwt jwt,
+		@RequestBody ChangePasswordRequestDto request) {
+		UUID customerId = getCustomerUuid(jwt);
+		customerService.changePassword(customerId, request);
+		return ResponseEntity.ok("비밀번호가 변경되었습니다.");
 	}
 }

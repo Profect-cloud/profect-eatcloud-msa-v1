@@ -26,7 +26,6 @@ public class GatewayConfig {
 			.route("customer-service", r -> r
 				.path("/api/v1/customers/**")
 				.filters(f -> f
-					.stripPrefix(2)
 					.addRequestHeader("X-Service-Name", "customer-service"))
 				.uri("lb://customer-service"))
 

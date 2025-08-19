@@ -110,7 +110,16 @@ public class AuthService {
 			throw new RuntimeException("이메일 전송에 실패했습니다.", e);
 		}
 
-		SignupRedisData data = new SignupRedisData(req, verificationCode);
+		String encodedPassword = passwordEncoder.encode(req.getPassword());
+		SignupRequestDto encodedReq = SignupRequestDto.builder()
+			.email(req.getEmail())
+			.password(encodedPassword)
+			.name(req.getName())
+			.nickname(req.getNickname())
+			.phone(req.getPhone())
+			.build();
+
+		SignupRedisData data = new SignupRedisData(encodedReq, verificationCode);
 		redisTemplate.opsForValue().set("signup:" + req.getEmail(), data, 10, TimeUnit.MINUTES);
 	}
 
@@ -133,8 +142,17 @@ public class AuthService {
 		if (getCustomerByEmail(req.getEmail()) != null) {
 			throw new RuntimeException("이미 존재하는 이메일입니다.");
 		}
+
+		SignupRequestDto encodedReq = SignupRequestDto.builder()
+			.email(req.getEmail())
+			.password(passwordEncoder.encode(req.getPassword()))
+			.name(req.getName())
+			.nickname(req.getNickname())
+			.phone(req.getPhone())
+			.build();
+
 		// Gateway에 회원가입 요청
-		restTemplate.postForObject("http://customer-service/api/v1/customers/signup", req, Void.class);
+		restTemplate.postForObject("http://customer-service/api/v1/customers/signup", encodedReq, Void.class);
 	}
 
 	private UserDto getCustomerByEmail(String email) {

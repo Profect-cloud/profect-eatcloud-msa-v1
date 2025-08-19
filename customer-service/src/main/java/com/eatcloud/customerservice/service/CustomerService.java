@@ -2,6 +2,7 @@ package com.eatcloud.customerservice.service;
 
 import com.eatcloud.customerservice.dto.SignupRequestDto;
 import com.eatcloud.customerservice.dto.UserDto;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +13,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+import com.eatcloud.customerservice.dto.request.ChangePasswordRequestDto;
 import com.eatcloud.customerservice.dto.request.CustomerProfileUpdateRequestDto;
 import com.eatcloud.customerservice.dto.request.CustomerWithdrawRequestDto;
 import com.eatcloud.customerservice.dto.response.CustomerProfileResponseDto;
@@ -128,7 +130,7 @@ public class CustomerService {
 		try {
 			Customer customer = new Customer();
 			customer.setEmail(request.getEmail());
-			customer.setPassword(passwordEncoder.encode(request.getPassword()));
+			customer.setPassword(request.getPassword());
 			customer.setName(request.getName());
 			customer.setNickname(request.getNickname());
 			customer.setPhoneNumber(request.getPhone());
@@ -137,5 +139,18 @@ public class CustomerService {
 		} catch (Exception e) {
 			throw new RuntimeException("회원가입 처리 중 오류가 발생했습니다: " + e.getMessage());
 		}
+	}
+
+	@Transactional
+	public void changePassword(UUID customerId, ChangePasswordRequestDto request) {
+		Customer customer = customerRepository.findById(customerId)
+			.orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+		if (!passwordEncoder.matches(request.getCurrentPassword(), customer.getPassword())) {
+			throw new IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.");
+		}
+
+		customer.setPassword(passwordEncoder.encode(request.getNewPassword()));
+		customerRepository.save(customer);
 	}
 }

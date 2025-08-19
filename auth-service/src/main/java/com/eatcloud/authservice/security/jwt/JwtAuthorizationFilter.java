@@ -35,13 +35,15 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 	@Override
 	protected boolean shouldNotFilter(HttpServletRequest request) {
 		String path = request.getRequestURI();
-
-		// 로그인/회원가입, 구글 로그인 콜백 등은 JWT 인증 필터 제외
-		return path.startsWith("/auth/login") ||
-			path.startsWith("/auth/register") ||
-			path.startsWith("/auth/google") ||
-			path.startsWith("/oauth2/") ||
-			path.startsWith("/auth/success");
+		// 인증/가입/토큰교환 등 auth 전용 엔드포인트는 JWT 필터 제외
+		if (path.startsWith("/api/v1/auth/")) {
+			return true;
+		}
+		// OAuth2 콜백 등 추가 예외
+		if (path.startsWith("/oauth2/") || path.startsWith("/auth/success")) {
+			return true;
+		}
+		return false;
 	}
 
 	// 요청마다 JWT 토큰을 꺼내서 검증하고, 인증 객체(SecurityContext)에 등록함.

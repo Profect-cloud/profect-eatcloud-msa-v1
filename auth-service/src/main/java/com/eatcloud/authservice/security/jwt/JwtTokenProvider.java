@@ -1,7 +1,9 @@
 package com.eatcloud.authservice.security.jwt;
 
 import java.security.Key;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -48,9 +50,17 @@ public class JwtTokenProvider {
 		Date now = new Date();
 		Date expiryDate = new Date(now.getTime() + tokenValidity);
 
+		List<String> roles = switch (type.toLowerCase()) {
+			case "customer" -> Arrays.asList("CUSTOMER");
+			case "manager" -> Arrays.asList("MANAGER");
+			case "admin" -> Arrays.asList("ADMIN");
+			default -> Arrays.asList("USER");
+		};
+
 		return Jwts.builder()
 			.setSubject(String.valueOf(id))
-			.claim("type", type)  // user,manager Type도 추가로 저장
+			.claim("type", type)
+			.claim("roles", roles)
 			.setIssuedAt(now)
 			.setExpiration(expiryDate)
 			.signWith(secretKey)
@@ -123,7 +133,7 @@ public class JwtTokenProvider {
 	public String resolveToken(HttpServletRequest request) {
 		String bearerToken = request.getHeader("Authorization");
 		if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-			return bearerToken.substring(7);
+			return bearerToken.substring(7).trim();
 		}
 		return null;
 	}
