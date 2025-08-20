@@ -1,6 +1,6 @@
 package com.eatcloud.storeservice.domain.store.controller;
 
-import com.eatcloud.storeservice.common.ApiResponse;
+import com.eatcloud.autoresponse.core.ApiResponse;
 import com.eatcloud.storeservice.domain.store.dto.DailySalesResponseDto;
 import com.eatcloud.storeservice.domain.store.dto.MenuSalesRankingResponseDto;
 import com.eatcloud.storeservice.domain.store.dto.SalesPeriodSummaryResponseDto;

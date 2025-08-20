@@ -1,14 +1,17 @@
 package com.eatcloud.storeservice.domain.menu.entity;
 
+import com.eatcloud.autotime.BaseTimeEntity;
 import com.eatcloud.storeservice.domain.store.entity.Store;
-import com.eatcloud.storeservice.global.timeData.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
+
 import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
 @Table(name = "p_menus")
+@SQLRestriction("deleted_at is null")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -31,7 +34,10 @@ public class Menu extends BaseTimeEntity {
     @Column(name = "menu_name", nullable = false, length = 200)
     private String menuName;
 
-    @Column(name = "menu_category_code", nullable = false, length = 30)
+//    @Column(name = "menu_category_id", nullable = false)
+//    private Integer menuCategoryId;
+
+    @Column(name = "menu_category_code", nullable = false, length = 100)
     private String menuCategoryCode;
 
     @Column(name = "price", nullable = false, precision = 10, scale = 2)

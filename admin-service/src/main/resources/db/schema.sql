@@ -1,75 +1,126 @@
--- ADMIN service
--- 참고: gen_random_uuid() 사용 시 DB 레벨에서 pgcrypto 확장 필요
--- CREATE EXTENSION IF NOT EXISTS pgcrypto;
+-- admin/schema.sql
+CREATE SCHEMA IF NOT EXISTS admin;
+SET search_path TO admin;
 
-CREATE TABLE p_admins (
+-- Extensions used in this schema
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- ========= 카테고리 3단계 =========
+CREATE TABLE IF NOT EXISTS p_store_categories (
+  id                 INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  name               VARCHAR(100) NOT NULL UNIQUE,
+  code               VARCHAR(50)  NOT NULL UNIQUE, -- immutable slug (e.g., KOREAN)
+  sort_order         INT          NOT NULL DEFAULT 0,
+  is_active          BOOLEAN      NOT NULL DEFAULT TRUE,
+  total_store_amount INT          NOT NULL DEFAULT 0, -- number of stores using this category
+  created_at         TIMESTAMP    NOT NULL DEFAULT now(),
+  updated_at         TIMESTAMP    NOT NULL DEFAULT now(),
+  created_by         VARCHAR(100) NOT NULL,
+  updated_by         VARCHAR(100) NOT NULL,
+  deleted_at         TIMESTAMP,
+  deleted_by         VARCHAR(100)
+);
+CREATE INDEX IF NOT EXISTS idx_storecat_active_sort
+  ON p_store_categories (is_active, sort_order, id);
+
+CREATE TABLE IF NOT EXISTS p_mid_categories (
+  id                 INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  store_category_id  INT NOT NULL REFERENCES p_store_categories(id),
+  name               VARCHAR(100) NOT NULL,
+  code               VARCHAR(100) NOT NULL UNIQUE, -- e.g., RICE, NOODLE
+  sort_order         INT          NOT NULL DEFAULT 0,
+  is_active          BOOLEAN      NOT NULL DEFAULT TRUE,
+  total_store_amount INT          NOT NULL DEFAULT 0,
+  created_at         TIMESTAMP    NOT NULL DEFAULT now(),
+  updated_at         TIMESTAMP    NOT NULL DEFAULT now(),
+  created_by         VARCHAR(100) NOT NULL,
+  updated_by         VARCHAR(100) NOT NULL,
+  deleted_at         TIMESTAMP,
+  deleted_by         VARCHAR(100),
+  CONSTRAINT uq_mid_name_in_store UNIQUE (store_category_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_mid_store ON p_mid_categories (store_category_id);
+CREATE INDEX IF NOT EXISTS idx_mid_active_sort_in_cat
+  ON p_mid_categories (store_category_id, is_active, sort_order, id);
+
+CREATE TABLE IF NOT EXISTS p_menu_categories (
+  id                 INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  store_category_id  INT NOT NULL REFERENCES p_store_categories(id), -- denormalized for fast filters
+  mid_category_id    INT NOT NULL REFERENCES p_mid_categories(id),
+  name               VARCHAR(100) NOT NULL,
+  code               VARCHAR(100) NOT NULL UNIQUE, -- e.g., BIBIMBAP
+  sort_order         INT          NOT NULL DEFAULT 0,
+  is_active          BOOLEAN      NOT NULL DEFAULT TRUE,
+  total_store_amount INT          NOT NULL DEFAULT 0,
+  created_at         TIMESTAMP    NOT NULL DEFAULT now(),
+  updated_at         TIMESTAMP    NOT NULL DEFAULT now(),
+  created_by         VARCHAR(100) NOT NULL,
+  updated_by         VARCHAR(100) NOT NULL,
+  deleted_at         TIMESTAMP,
+  deleted_by         VARCHAR(100),
+  CONSTRAINT uq_menu_name_in_mid UNIQUE (mid_category_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_menu_mid ON p_menu_categories (mid_category_id);
+CREATE INDEX IF NOT EXISTS idx_menu_store ON p_menu_categories (store_category_id);
+CREATE INDEX IF NOT EXISTS idx_menu_active_sort_in_mid
+  ON p_menu_categories (mid_category_id, is_active, sort_order, id);
+
+-- ========= 관리자/신청 =========
+CREATE TABLE IF NOT EXISTS p_admins (
   id           UUID PRIMARY KEY,
   name         VARCHAR(20) UNIQUE NOT NULL,
   email        VARCHAR(255)       NOT NULL,
   password     VARCHAR(255)       NOT NULL,
   phone_number VARCHAR(18),
   position     VARCHAR(50),
-  p_time_id    UUID               NOT NULL  -- FK 제거됨
+  created_at   TIMESTAMP    NOT NULL DEFAULT now(),
+  created_by   VARCHAR(100) NOT NULL,
+  updated_at   TIMESTAMP    NOT NULL DEFAULT now(),
+  updated_by   VARCHAR(100) NOT NULL,
+  deleted_at   TIMESTAMP,
+  deleted_by   VARCHAR(100)
 );
 
--- 매니저 신청(헤더/심사)
-CREATE TABLE p_manager_applications (
-  application_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  manager_name         VARCHAR(20)  NOT NULL,
-  manager_email        VARCHAR(255) NOT NULL,
-  manager_password     VARCHAR(255) NOT NULL,
-  manager_phone_number VARCHAR(18),
+CREATE TABLE IF NOT EXISTS p_manager_store_applications (
+    application_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
-  status               VARCHAR(20)  NOT NULL DEFAULT 'PENDING', -- PENDING|APPROVED|REJECTED
-  reviewer_admin_id    UUID,                                     -- 내부 FK 유지
-  review_comment       TEXT,
+    -- ■ Manager 신청 정보
+    manager_name         VARCHAR(20)  NOT NULL,
+    manager_email        VARCHAR(255) NOT NULL,
+    manager_password     VARCHAR(255) NOT NULL,
+    manager_phone_number VARCHAR(18),
 
-  p_time_id            UUID         NOT NULL                     -- FK 제거됨
-);
-CREATE UNIQUE INDEX ux_mgrapp_manager_email ON p_manager_applications(manager_email);
-ALTER TABLE p_manager_applications
-  ADD CONSTRAINT fk_mgrapp_reviewer
-  FOREIGN KEY (reviewer_admin_id) REFERENCES p_admins (id);
+    -- ■ Store 신청 정보
+    store_name           VARCHAR(200) NOT NULL,
+    store_address        VARCHAR(300),
+    store_phone_number   VARCHAR(18),
+    -- 기존 설계와 맞춤: top-level 카테고리는 admin.p_store_categories(id) = INTEGER
+    store_category_id    INT NOT NULL REFERENCES p_store_categories(id),
+    description          TEXT,
 
--- 스토어 신청 상세 (1:1: application_id 동일)
-CREATE TABLE p_store_applications (
-  application_id      UUID PRIMARY KEY,                          -- 내부 FK 유지(헤더와 동일 키)
-  store_name          VARCHAR(200) NOT NULL,
-  store_address       VARCHAR(300),
-  store_phone_number  VARCHAR(18),
-  category_id         UUID,            -- 논리참조: admin.p_categories.category_id
-  description         TEXT,
+    -- ■ 심사 상태
+    status               VARCHAR(20)  NOT NULL DEFAULT 'PENDING',  -- PENDING|APPROVED|REJECTED
+    reviewer_admin_id    UUID REFERENCES p_admins(id) ON DELETE SET NULL,
+    review_comment       TEXT,
 
-  status              VARCHAR(20) NOT NULL DEFAULT 'PENDING',
-  reviewer_admin_id   UUID,            -- 내부 FK 유지
-  review_comment      TEXT,
-
-  p_time_id           UUID NOT NULL     -- FK 제거됨
-);
-ALTER TABLE p_store_applications
-  ADD CONSTRAINT fk_storeapp_header
-  FOREIGN KEY (application_id) REFERENCES p_manager_applications (application_id);
-ALTER TABLE p_store_applications
-  ADD CONSTRAINT fk_storeapp_reviewer
-  FOREIGN KEY (reviewer_admin_id) REFERENCES p_admins (id);
-
--- 매장 대분류
-CREATE TABLE p_categories (
-  category_id        UUID PRIMARY KEY,
-  category_name      VARCHAR(100) NOT NULL,
-  sort_order         INTEGER      NOT NULL,
-  is_active          BOOLEAN      NOT NULL DEFAULT true,
-  total_store_count  INTEGER      NOT NULL DEFAULT 0,
-  p_time_id          UUID         NOT NULL   -- FK 제거됨
+    -- ■ BaseTimeEntity (autotime) 필드
+    created_at           TIMESTAMP    NOT NULL DEFAULT now(),
+    created_by           VARCHAR(100) NOT NULL DEFAULT 'system',
+    updated_at           TIMESTAMP    NOT NULL DEFAULT now(),
+    updated_by           VARCHAR(100) NOT NULL DEFAULT 'system',
+    deleted_at           TIMESTAMP,
+    deleted_by           VARCHAR(100)
 );
 
--- 메뉴 소분류
-CREATE TABLE p_menu_category (
-  menu_category_id    INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  menu_category_name  VARCHAR(50)  NOT NULL,
-  sort_order          INTEGER      NOT NULL,
-  is_active           BOOLEAN      NOT NULL DEFAULT true,
-  total_store_count   INTEGER      NOT NULL DEFAULT 0,
-  p_time_id           UUID         NOT NULL   -- FK 제거됨
-);
-CREATE UNIQUE INDEX ux_pmc_name ON p_menu_category(menu_category_name);
+-- 인덱스/유니크
+CREATE UNIQUE INDEX IF NOT EXISTS ux_mgrstore_manager_email
+    ON p_manager_store_applications (manager_email);
+
+CREATE INDEX IF NOT EXISTS idx_mgrstore_status
+    ON p_manager_store_applications (status);
+
+CREATE INDEX IF NOT EXISTS idx_mgrstore_store_category
+    ON p_manager_store_applications (store_category_id);
+
+CREATE INDEX IF NOT EXISTS idx_mgrstore_reviewer
+    ON p_manager_store_applications (reviewer_admin_id);

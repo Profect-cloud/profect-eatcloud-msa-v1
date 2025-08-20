@@ -1,13 +1,13 @@
 package com.eatcloud.storeservice.domain.store.repository;
 
 
+import com.eatcloud.autotime.repository.SoftDeleteRepository;
 import com.eatcloud.storeservice.domain.store.entity.DailyStoreSales;
 import com.eatcloud.storeservice.domain.store.entity.DailyStoreSalesId;
 import com.eatcloud.storeservice.domain.store.entity.QDailyStoreSales;
 import com.eatcloud.storeservice.domain.store.entity.QStore;
 import com.eatcloud.storeservice.global.queryDSL.SoftDeletePredicates;
 import com.eatcloud.storeservice.global.queryDSL.SpringContext;
-import com.eatcloud.storeservice.global.timeData.BaseTimeRepository;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 
@@ -16,7 +16,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-public interface DailyStoreSalesRepository extends BaseTimeRepository<DailyStoreSales, DailyStoreSalesId> {
+public interface DailyStoreSalesRepository extends SoftDeleteRepository<DailyStoreSales, DailyStoreSalesId> {
 
     default List<DailyStoreSales> findByStoreIdAndDateRangeActive(UUID storeId, LocalDate startDate, LocalDate endDate) {
         JPAQueryFactory queryFactory = getQueryFactory();

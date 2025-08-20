@@ -30,7 +30,7 @@ public class AdminService {
 	}
 
 	public void deleteCustomerByEmail(String email) {
-		customerPort.deleteByEmail(email);
+		customerPort.softDeleteByEmail(email);
 	}
 
 	// ============ Managers ============
@@ -43,7 +43,7 @@ public class AdminService {
 	}
 
 	public void deleteManagerByEmail(String email) {
-		managerPort.deleteByEmail(email);
+		managerPort.softDeleteByEmail(email);
 	}
 
 	// ============ Stores ============
@@ -56,6 +56,6 @@ public class AdminService {
 	}
 
 	public void deleteStore(UUID storeId) {
-		storePort.deleteById(storeId);
+		storePort.softDeleteById(storeId);
 	}
 }

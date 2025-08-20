@@ -1,17 +1,19 @@
 package com.eatcloud.storeservice.domain.store.entity;
 
-import com.eatcloud.storeservice.global.timeData.BaseTimeEntity;
-import com.eatcloud.storeservice.globalCategory.entity.StoreCategory;
+
+
+import com.eatcloud.autotime.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
+import org.locationtech.jts.geom.Point;
 
-
-import java.awt.*;
 import java.time.LocalTime;
 import java.util.UUID;
 
 
 @Entity
+@SQLRestriction("deleted_at is null")
 @Table(name = "p_stores")
 @Getter
 @NoArgsConstructor
@@ -65,8 +67,7 @@ public class Store extends BaseTimeEntity {
     @Column(name = "close_time", nullable = false)
     private LocalTime closeTime;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")
-    private StoreCategory storeCategory;
+    @Column(name = "store_category_id", nullable = false)
+    private Integer storeCategoryId;
 
 }

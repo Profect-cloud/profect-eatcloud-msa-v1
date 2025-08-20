@@ -6,7 +6,7 @@ import com.eatcloud.adminservice.domain.admin.entity.ManagerStoreApplication;
 import com.eatcloud.adminservice.domain.admin.exception.AdminErrorCode;
 import com.eatcloud.adminservice.domain.admin.exception.AdminException;
 import com.eatcloud.adminservice.domain.admin.repository.ManagerStoreApplicationRepository;
-import com.eatcloud.adminservice.domain.globalCategory.repository.StoreCategoryRepository;
+import com.eatcloud.adminservice.domain.category.repository.StoreCategoryRepository;
 import com.eatcloud.adminservice.ports.CreateStoreCommand;
 import com.eatcloud.adminservice.ports.ManagerAdminPort;
 import com.eatcloud.adminservice.ports.ManagerUpsertCommand;
@@ -39,7 +39,7 @@ public class AdminAssignService {
 						.managerEmail(app.getManagerEmail())
 						.storeName(app.getStoreName())
 						.status(app.getStatus())
-						.appliedAt(app.getTimeData().getCreatedAt())
+						.appliedAt(app.getCreatedAt())
 						.build())
 				.toList();
 	}
@@ -62,8 +62,8 @@ public class AdminAssignService {
 				.status(app.getStatus())
 				.reviewerAdminId(app.getReviewerAdminId())
 				.reviewComment(app.getReviewComment())
-				.appliedAt(app.getTimeData().getCreatedAt())
-				.updatedAt(app.getTimeData().getUpdatedAt())
+				.appliedAt(app.getCreatedAt())
+				.updatedAt(app.getUpdatedAt())
 				.build();
 	}
 

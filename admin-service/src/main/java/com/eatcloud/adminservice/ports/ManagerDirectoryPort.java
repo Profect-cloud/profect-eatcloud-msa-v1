@@ -7,5 +7,5 @@ import java.util.List;
 public interface ManagerDirectoryPort {
     List<ManagerDto> findAll();
     ManagerDto getByEmail(String email);
-    void deleteByEmail(String email);
+    void softDeleteByEmail(String email);
 }

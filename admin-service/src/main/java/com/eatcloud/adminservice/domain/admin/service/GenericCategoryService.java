@@ -3,10 +3,9 @@ package com.eatcloud.adminservice.domain.admin.service;
 import com.eatcloud.adminservice.domain.admin.dto.CategoryDto;
 import com.eatcloud.adminservice.domain.admin.exception.AdminErrorCode;
 import com.eatcloud.adminservice.domain.admin.exception.AdminException;
-import com.eatcloud.adminservice.domain.globalCategory.entity.BaseCategory;
-import com.eatcloud.adminservice.domain.globalCategory.entity.MenuCategory;
-import com.eatcloud.adminservice.domain.globalCategory.entity.StoreCategory;
-import com.eatcloud.adminservice.domain.globalCategory.repository.BaseCategoryRepository;
+import com.eatcloud.adminservice.domain.category.entity.*;
+import com.eatcloud.adminservice.domain.category.repository.*;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,88 +15,187 @@ import java.util.Map;
 @Service
 public class GenericCategoryService {
 
-	/**
-	 * key: 카테고리 타입 (예: "store-categories", "menu-categories")
-	 * value: 해당 리포지토리 빈
-	 */
 	private final Map<String, BaseCategoryRepository<? extends BaseCategory>> repoMap;
 
+	private final StoreCategoryRepository storeRepo;
+	private final MidCategoryRepository midRepo;
+	private final MenuCategoryRepository menuRepo;
+
 	public GenericCategoryService(
-		Map<String, BaseCategoryRepository<? extends BaseCategory>> repoMap
+			Map<String, BaseCategoryRepository<? extends BaseCategory>> repoMap,
+			StoreCategoryRepository storeRepo,
+			MidCategoryRepository midRepo,
+			MenuCategoryRepository menuRepo
 	) {
 		this.repoMap = repoMap;
+		this.storeRepo = storeRepo;
+		this.midRepo = midRepo;
+		this.menuRepo = menuRepo;
 	}
 
 	private BaseCategoryRepository<BaseCategory> repo(String type) {
 		@SuppressWarnings("unchecked")
-		var r = (BaseCategoryRepository<BaseCategory>)repoMap.get(type);
-		if (r == null) {
-			throw new AdminException(AdminErrorCode.INVALID_INPUT);
-		}
+		var r = (BaseCategoryRepository<BaseCategory>) repoMap.get(type);
+		if (r == null) throw new AdminException(AdminErrorCode.INVALID_INPUT);
 		return r;
 	}
 
+	// ---------- CREATE ----------
 	@Transactional
 	public CategoryDto create(String type, CategoryDto dto) {
-		BaseCategory entity = newEntity(type);
-		entity.setCode(dto.getCode());
-		entity.setDisplayName(dto.getDisplayName());
-		entity.setSortOrder(dto.getSortOrder());
-		entity.setIsActive(dto.getIsActive());
+		BaseCategory entity = switch (type) {
+			case "store-categories" -> buildStore(dto);
+			case "mid-categories"   -> buildMid(dto);
+			case "menu-categories"  -> buildMenu(dto);
+			default -> throw new AdminException(AdminErrorCode.INVALID_INPUT);
+		};
 		BaseCategory saved = repo(type).save(entity);
 		return toDto(saved);
 	}
 
+	private StoreCategory buildStore(CategoryDto d) {
+		var e = new StoreCategory();
+		fillBase(e, d);
+		return e;
+	}
+
+	private MidCategory buildMid(CategoryDto d) {
+		if (d.getStoreCategoryId() == null) throw new AdminException(AdminErrorCode.INVALID_INPUT);
+		StoreCategory parent = storeRepo.findById(d.getStoreCategoryId())
+				.orElseThrow(() -> new AdminException(AdminErrorCode.CATEGORY_NOT_FOUND));
+		var e = new MidCategory();
+		fillBase(e, d);
+		e.setStoreCategory(parent);
+		return e;
+	}
+
+	private MenuCategory buildMenu(CategoryDto d) {
+		if (d.getMidCategoryId() == null) throw new AdminException(AdminErrorCode.INVALID_INPUT);
+		MidCategory mid = midRepo.findById(d.getMidCategoryId())
+				.orElseThrow(() -> new AdminException(AdminErrorCode.CATEGORY_NOT_FOUND));
+		StoreCategory storeFromMid = mid.getStoreCategory();
+
+		StoreCategory storeToUse = storeFromMid;
+		if (d.getStoreCategoryId() != null) {
+			// 명시된 storeCategoryId가 mid의 상위와 다르면 에러
+			if (!d.getStoreCategoryId().equals(storeFromMid.getId())) {
+				throw new AdminException(AdminErrorCode.INVALID_INPUT);
+			}
+		}
+		var e = new MenuCategory();
+		fillBase(e, d);
+		e.setMidCategory(mid);
+		e.setStoreCategory(storeToUse); // denorm
+		return e;
+	}
+
+	// ---------- UPDATE ----------
 	@Transactional
 	public CategoryDto update(String type, Integer id, CategoryDto dto) {
-		var repository = repo(type);
+		BaseCategoryRepository<BaseCategory> repository = repo(type);
 		BaseCategory entity = repository.findById(id)
-			.orElseThrow(() -> new AdminException(AdminErrorCode.CATEGORY_NOT_FOUND));
-		entity.setCode(dto.getCode());
-		entity.setDisplayName(dto.getDisplayName());
-		entity.setSortOrder(dto.getSortOrder());
-		entity.setIsActive(dto.getIsActive());
+				.orElseThrow(() -> new AdminException(AdminErrorCode.CATEGORY_NOT_FOUND));
+
+		// 공통 필드 갱신
+		fillBase(entity, dto);
+
+		// 관계 변경 처리
+		switch (type) {
+			case "mid-categories" -> {
+				MidCategory mid = (MidCategory) entity;
+				if (dto.getStoreCategoryId() != null &&
+						(mid.getStoreCategory() == null ||
+								!dto.getStoreCategoryId().equals(mid.getStoreCategory().getId()))) {
+					StoreCategory parent = storeRepo.findById(dto.getStoreCategoryId())
+							.orElseThrow(() -> new AdminException(AdminErrorCode.CATEGORY_NOT_FOUND));
+					mid.setStoreCategory(parent);
+				}
+			}
+			case "menu-categories" -> {
+				MenuCategory menu = (MenuCategory) entity;
+				if (dto.getMidCategoryId() != null &&
+						(menu.getMidCategory() == null ||
+								!dto.getMidCategoryId().equals(menu.getMidCategory().getId()))) {
+					MidCategory newMid = midRepo.findById(dto.getMidCategoryId())
+							.orElseThrow(() -> new AdminException(AdminErrorCode.CATEGORY_NOT_FOUND));
+					menu.setMidCategory(newMid);
+					menu.setStoreCategory(newMid.getStoreCategory()); // 정합성 유지
+				}
+				if (dto.getStoreCategoryId() != null &&
+						!dto.getStoreCategoryId().equals(menu.getStoreCategory().getId())) {
+					// menu의 storeCategory는 mid의 상위와 일치해야 함
+					throw new AdminException(AdminErrorCode.INVALID_INPUT);
+				}
+			}
+		}
+
 		BaseCategory updated = repository.save(entity);
 		return toDto(updated);
 	}
 
+	// ---------- DELETE ----------
 	@Transactional
 	public void delete(String type, Integer id) {
-		var repository = repo(type);
+		BaseCategoryRepository<BaseCategory> repository = repo(type);
 		BaseCategory entity = repository.findById(id)
-			.orElseThrow(() -> new AdminException(AdminErrorCode.CATEGORY_NOT_FOUND));
-		repository.delete(entity);
+				.orElseThrow(() -> new AdminException(AdminErrorCode.CATEGORY_NOT_FOUND));
+
+		// 하위 존재 여부 체크 (소프트 규칙; DB FK로 막을 수도 있음)
+		switch (type) {
+			case "store-categories" -> {
+				if (midRepo.existsByStoreCategoryId(id)) {
+					throw new AdminException(AdminErrorCode.INVALID_INPUT); // "하위(Mid) 존재"
+				}
+			}
+			case "mid-categories" -> {
+				if (menuRepo.existsByMidCategoryId(id)) {
+					throw new AdminException(AdminErrorCode.INVALID_INPUT); // "하위(Menu) 존재"
+				}
+			}
+		}
+
+		repository.softDelete(entity,"admin");
 	}
 
+	// ---------- LIST ----------
 	public List<CategoryDto> list(String type) {
-		return repo(type).findAll()
-			.stream()
-			.map(this::toDto)
-			.toList();
+		return repo(type)
+				.findAll(Sort.by("sortOrder").ascending().and(Sort.by("id").ascending()))
+				.stream()
+				.map(this::toDto)
+				.toList();
 	}
 
-	// ------------------------
-	// helper: 새로운 엔티티 인스턴스를 생성
-	// ------------------------
-	private BaseCategory newEntity(String type) {
-		return switch (type) {
-			case "store-categories" -> new StoreCategory();
-			case "menu-categories" -> new MenuCategory();
-			// 다른 카테고리는 여기에 추가
-			default -> throw new AdminException(AdminErrorCode.INVALID_INPUT);
-		};
+	// ---------- 공통 mapper ----------
+	private void fillBase(BaseCategory e, CategoryDto d) {
+		e.setCode(d.getCode());
+		e.setName(d.getDisplayName()); // DTO의 displayName -> 엔티티 name
+		if (d.getSortOrder() != null) e.setSortOrder(d.getSortOrder());
+		if (d.getIsActive() != null)  e.setIsActive(d.getIsActive());
+		if (d.getTotalStoreAmount() != null) e.setTotalStoreAmount(d.getTotalStoreAmount());
 	}
 
-	// ------------------------
-	// helper: Entity → DTO 변환
-	// ------------------------
 	private CategoryDto toDto(BaseCategory e) {
-		return CategoryDto.builder()
-			.id(e.getId())
-			.code(e.getCode())
-			.displayName(e.getDisplayName())
-			.sortOrder(e.getSortOrder())
-			.isActive(e.getIsActive())
-			.build();
+		CategoryDto.CategoryDtoBuilder b = CategoryDto.builder()
+				.id(e.getId())
+				.code(e.getCode())
+				.displayName(e.getName())
+				.sortOrder(e.getSortOrder())
+				.isActive(e.getIsActive())
+				.totalStoreAmount(e.getTotalStoreAmount());
+
+		if (e instanceof MidCategory mid) {
+			if (mid.getStoreCategory() != null) {
+				b.storeCategoryId(mid.getStoreCategory().getId());
+			}
+		} else if (e instanceof MenuCategory menu) {
+			if (menu.getStoreCategory() != null) {
+				b.storeCategoryId(menu.getStoreCategory().getId());
+			}
+			if (menu.getMidCategory() != null) {
+				b.midCategoryId(menu.getMidCategory().getId());
+			}
+		}
+		return b.build();
 	}
 }

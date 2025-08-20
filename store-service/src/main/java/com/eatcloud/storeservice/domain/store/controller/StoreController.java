@@ -1,7 +1,7 @@
 package com.eatcloud.storeservice.domain.store.controller;
 
-
-import com.eatcloud.storeservice.common.ApiResponse;
+import com.eatcloud.autoresponse.core.ApiResponse;
+import com.eatcloud.storeservice.domain.store.dto.StoreKeywordSearchRequestDto;
 import com.eatcloud.storeservice.domain.store.dto.StoreSearchByMenuCategoryRequestDto;
 import com.eatcloud.storeservice.domain.store.dto.StoreSearchRequestDto;
 import com.eatcloud.storeservice.domain.store.dto.StoreSearchResponseDto;
@@ -9,10 +9,13 @@ import com.eatcloud.storeservice.domain.store.service.StoreService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.data.domain.Page;
+import org.springframework.web.bind.annotation.*;
 
 
 import java.util.List;
@@ -44,4 +47,14 @@ public class StoreController {
 		return ApiResponse.success(stores);
 	}
 
+	@Operation(summary = "3. 키워드 + 카테고리 + 페이지네이션 + 정렬")
+	@GetMapping("/search")
+	public ApiResponse<Page<StoreSearchResponseDto>> searchByKeyword(
+			@ModelAttribute StoreKeywordSearchRequestDto req
+	) {
+		return ApiResponse.success(storeService.searchStoresByKeyword(req));
+	}
+
+	// 키워드 검색
+	// 필터 정렬
 }

@@ -1,6 +1,5 @@
 package com.eatcloud.storeservice.domain.manager.controller;
 
-import com.eatcloud.storeservice.common.ApiResponse;
 import com.eatcloud.storeservice.domain.manager.dto.StoreRegisterRequestDto;
 import com.eatcloud.storeservice.domain.manager.message.ManagerResponseMessage;
 import com.eatcloud.storeservice.domain.manager.service.ManagerService;
@@ -19,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import com.eatcloud.autoresponse.core.ApiResponse;
 
 import java.util.UUID;
 

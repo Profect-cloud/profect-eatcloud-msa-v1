@@ -41,7 +41,7 @@ public class AssignService {
 		return ManagerStoreApplicationResponseDto.builder()
 			.applicationId(saved.getApplicationId())
 			.status(saved.getStatus())
-			.createdAt(saved.getTimeData().getCreatedAt())
+			.createdAt(saved.getCreatedAt())
 			.build();
 	}
 
