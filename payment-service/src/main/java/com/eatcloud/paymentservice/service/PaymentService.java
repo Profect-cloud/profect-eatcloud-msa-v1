@@ -29,7 +29,7 @@ public class PaymentService {
     private final PaymentRequestRepository paymentRequestRepository;
     private final TossPaymentService tossPaymentService;
     private final PaymentMethodCodeRepository paymentMethodCodeRepository;
-    // private final PaymentEventProducer paymentEventProducer;
+    private final PaymentEventProducer paymentEventProducer;
     
     private static final long PAYMENT_TIMEOUT_MINUTES = 5;
     
@@ -96,7 +96,7 @@ public class PaymentService {
                 .approvedAt(savedPayment.getApprovedAt())
                 .build();
         
-        // paymentEventProducer.publishPaymentCreated(event);
+        paymentEventProducer.publishPaymentCreated(event);
         
         log.info("결제 승인 완료: paymentId={}, orderId={}", savedPayment.getPaymentId(), orderId);
         

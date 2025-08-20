@@ -37,6 +37,7 @@ public class OrderService {
     private final OrderTypeCodeRepository orderTypeCodeRepository;
     private final ExternalApiService externalApiService;
     private final DistributedLockService distributedLockService;
+    private final OrderEventProducer orderEventProducer;
     @Lazy
     // private final SagaOrchestrator sagaOrchestrator;
 
@@ -94,6 +95,30 @@ public class OrderService {
                         request.getUsePoints(),
                         request.getPointsToUse()
                     );
+
+                    // 이벤트 발행 (주문 생성)
+                    try {
+                        com.eatcloud.orderservice.event.OrderCreatedEvent event =
+                            com.eatcloud.orderservice.event.OrderCreatedEvent.builder()
+                                .orderId(order.getOrderId())
+                                .customerId(order.getCustomerId())
+                                .storeId(order.getStoreId())
+                                .totalAmount(order.getTotalPrice())
+                                .finalAmount(order.getFinalPaymentAmount())
+                                .pointsToUse(order.getPointsToUse())
+                                .orderItems(orderMenuList.stream()
+                                    .map(m -> com.eatcloud.orderservice.event.OrderCreatedEvent.OrderItemEvent.builder()
+                                        .menuId(m.getMenuId())
+                                        .menuName(m.getMenuName())
+                                        .quantity(m.getQuantity())
+                                        .unitPrice(m.getPrice())
+                                        .build())
+                                    .collect(java.util.stream.Collectors.toList()))
+                                .build();
+                        orderEventProducer.publishOrderCreated(event);
+                    } catch (Exception publishEx) {
+                        log.error("주문 생성 이벤트 발행 실패: orderId={}", order.getOrderId(), publishEx);
+                    }
 
                     // 장바구니 비우기
                     try {
