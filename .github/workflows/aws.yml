@@ -213,10 +213,25 @@ jobs:
 
     - name: Deploy to ECS Staging
       run: |
-        # ECS 서비스 강제 새 배포
+        # 현재 태스크 정의 가져오기
+        TASK_DEFINITION=$(aws ecs describe-task-definition \
+          --task-definition ${{ matrix.service }} \
+          --query 'taskDefinition')
+        
+        # 새 이미지 URI로 업데이트
+        NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "${{ env.ECR_REGISTRY }}/eatcloud/${{ matrix.service }}:${{ github.sha }}" \
+          '.containerDefinitions[0].image = $IMAGE | del(.taskDefinitionArn) | del(.revision) | del(.status) | del(.requiresAttributes) | del(.placementConstraints) | del(.compatibilities) | del(.registeredAt) | del(.registeredBy)')
+        
+        # 새 태스크 정의 등록
+        NEW_REVISION=$(aws ecs register-task-definition \
+          --cli-input-json "$NEW_TASK_DEFINITION" \
+          --query 'taskDefinition.revision')
+        
+        # 서비스 업데이트 (새 태스크 정의 사용)
         aws ecs update-service \
           --cluster ${{ env.ECS_CLUSTER_STAGING }} \
           --service ${{ matrix.service }} \
+          --task-definition ${{ matrix.service }}:$NEW_REVISION \
           --force-new-deployment \
           --query 'service.{ServiceName:serviceName,Status:status,TaskDefinition:taskDefinition}'
 
