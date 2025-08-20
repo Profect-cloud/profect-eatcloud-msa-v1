@@ -185,7 +185,7 @@ jobs:
           ${{ env.ECR_REGISTRY }}/eatcloud/${{ matrix.service }}:${{ steps.short-sha.outputs.sha_short }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
-        platforms: linux/amd64
+        platforms: linux/arm64
 
     - name: Scan image for vulnerabilities
       run: |
