@@ -41,8 +41,8 @@ jobs:
         
         services=()
         
-        # 각 서비스별로 변경사항 확인
-        for service in api-gateway eureka-server auth-service customer-service admin-service manager-service store-service order-service payment-service; do
+        # 각 서비스별로 변경사항 확인 (eureka-server, api-gateway 제외)
+        for service in auth-service customer-service admin-service manager-service store-service order-service payment-service; do
           if echo "$changed_files" | grep -q "^$service/"; then
             services+=("$service")
           fi
@@ -50,12 +50,12 @@ jobs:
         
         # 루트 레벨 변경사항 (모든 서비스에 영향)
         if echo "$changed_files" | grep -qE "^(build\.gradle|settings\.gradle|docker-compose\.yml|gradle/|\.github/workflows/)"; then
-          services=(api-gateway eureka-server auth-service customer-service admin-service manager-service store-service order-service payment-service)
+          services=(auth-service customer-service admin-service manager-service store-service order-service payment-service)
         fi
         
         # 최초 커밋이나 서비스가 없는 경우 모든 서비스 빌드
         if [ ${#services[@]} -eq 0 ]; then
-          services=(api-gateway eureka-server auth-service customer-service admin-service manager-service store-service order-service payment-service)
+          services=(auth-service customer-service admin-service manager-service store-service order-service payment-service)
         fi
         
         # JSON 배열로 변환
