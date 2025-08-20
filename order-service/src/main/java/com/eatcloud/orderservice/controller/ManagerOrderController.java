@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ public class ManagerOrderController {
 
 	private final AdminOrderService adminOrderService;
 
+	@PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
 	@PostMapping("/confirm")
 	public ResponseEntity<AdminOrderResponseDto> confirmOrder(
 		@RequestBody AdminOrderConfirmRequestDto request) {
@@ -51,6 +53,7 @@ public class ManagerOrderController {
 		}
 	}
 
+	@PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
 	@PostMapping("/complete")
 	public ResponseEntity<AdminOrderResponseDto> completeOrder(
 		@RequestBody AdminOrderCompleteRequestDto request) {
@@ -77,6 +80,7 @@ public class ManagerOrderController {
 		}
 	}
 
+	@PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
 	@GetMapping("/{orderId}/status")
 	public ResponseEntity<AdminOrderResponseDto> getOrderStatus(@PathVariable UUID orderId) {
 
