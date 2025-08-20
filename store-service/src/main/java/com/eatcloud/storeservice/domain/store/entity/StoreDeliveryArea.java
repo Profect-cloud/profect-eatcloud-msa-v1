@@ -1,12 +1,14 @@
 package com.eatcloud.storeservice.domain.store.entity;
 
-import com.eatcloud.storeservice.global.timeData.BaseTimeEntity;
+import com.eatcloud.autotime.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.util.UUID;
 
 @Entity
+@SQLRestriction("deleted_at is null")
 @Table(name = "p_store_delivery_areas")
 @Getter @Setter
 @NoArgsConstructor

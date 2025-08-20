@@ -1,6 +1,8 @@
 package com.eatcloud.storeservice.domain.store.exception;
 
-public enum AiErrorCode {
+import com.eatcloud.autoresponse.error.ErrorCode;
+
+public enum AiErrorCode implements ErrorCode {
     AI_RESPONSE_PARSING_FAILED("AI_001", "AI 설명 응답 파싱 실패");
 
     private final String code;

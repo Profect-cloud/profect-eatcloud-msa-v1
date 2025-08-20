@@ -1,6 +1,8 @@
 package com.eatcloud.storeservice.domain.store.exception;
 
-public enum StoreErrorCode {
+import com.eatcloud.autoresponse.error.ErrorCode;
+
+public enum StoreErrorCode implements ErrorCode {
     STORE_NOT_FOUND("STORE_001", "해당 매장을 찾을 수 없습니다."),
     STORE_ALREADY_REGISTERED("STORE_002", "이미 등록된 가게입니다."),
     STORE_APPLICATION_PENDING("STORE_003", "등록 요청이 이미 진행 중입니다."),

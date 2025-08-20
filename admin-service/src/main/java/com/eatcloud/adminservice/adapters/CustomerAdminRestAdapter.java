@@ -51,7 +51,7 @@ public class CustomerAdminRestAdapter implements CustomerAdminPort {
     }
 
     @Override
-    public void deleteByEmail(String email) {
+    public void softDeleteByEmail(String email) {
         try {
             customerAdminRestClient.delete()
                     .uri(uriBuilder -> uriBuilder.path("/internal/admin/customers/by-email")

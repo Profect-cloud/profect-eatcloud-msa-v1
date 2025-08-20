@@ -6,5 +6,5 @@ import java.util.List;
 public interface CustomerAdminPort {
     List<UserDto> findAll();
     UserDto getByEmail(String email);
-    void deleteByEmail(String email);
+    void softDeleteByEmail(String email);
 }

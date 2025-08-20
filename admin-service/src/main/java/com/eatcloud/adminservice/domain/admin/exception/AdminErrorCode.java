@@ -1,6 +1,8 @@
 package com.eatcloud.adminservice.domain.admin.exception;
 
-public enum AdminErrorCode {
+import com.eatcloud.autoresponse.error.ErrorCode;
+
+public enum AdminErrorCode implements ErrorCode {
 	ADMIN_NOT_FOUND("ADMIN_001", "해당 관리자를 찾을 수 없습니다"),
 	EMAIL_ALREADY_EXISTS("ADMIN_002", "이미 사용 중인 이메일입니다"),
 	INVALID_INPUT("ADMIN_003", "잘못된 입력값입니다"),

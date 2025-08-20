@@ -154,7 +154,7 @@ public class GenericCategoryService {
 			}
 		}
 
-		repository.delete(entity);
+		repository.softDelete(entity,"admin");
 	}
 
 	// ---------- LIST ----------

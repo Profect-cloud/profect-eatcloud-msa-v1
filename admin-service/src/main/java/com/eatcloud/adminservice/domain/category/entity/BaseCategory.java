@@ -1,7 +1,7 @@
 // BaseCategory.java
 package com.eatcloud.adminservice.domain.category.entity;
 
-import com.eatcloud.adminservice.global.timeData.BaseTimeEntity;
+import com.eatcloud.autotime.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;

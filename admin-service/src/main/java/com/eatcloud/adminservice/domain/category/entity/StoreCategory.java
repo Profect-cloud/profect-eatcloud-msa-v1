@@ -6,9 +6,11 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "p_store_categories")
+@SQLRestriction("deleted_at is null")
 @Getter @Setter
 @SuperBuilder
 @NoArgsConstructor

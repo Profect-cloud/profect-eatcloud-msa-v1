@@ -1,14 +1,16 @@
 package com.eatcloud.adminservice.domain.admin.entity;
 
-import com.eatcloud.adminservice.global.timeData.BaseTimeEntity;
+import com.eatcloud.autotime.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 
 import java.util.UUID;
 
 @Entity
 @Table(name = "p_manager_store_applications")
+@SQLRestriction("deleted_at is null")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -44,7 +46,7 @@ public class ManagerStoreApplication extends BaseTimeEntity {
 	@Column(name = "store_phone_number", length = 18)
 	private String storePhoneNumber;
 
-	@Column(name = "category_id")
+	@Column(name = "store_category_id")   // ★ 컬럼명만 정확히 매핑
 	private Integer categoryId;
 
 	@Column(name = "description", columnDefinition = "TEXT")

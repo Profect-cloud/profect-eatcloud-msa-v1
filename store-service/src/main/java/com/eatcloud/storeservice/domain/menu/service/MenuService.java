@@ -30,14 +30,14 @@ public class MenuService {
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new StoreException(StoreErrorCode.STORE_NOT_FOUND));
 
-        return menuRepository.findAllByStoreAndTimeData_DeletedAtIsNull(store);
+        return menuRepository.findAllByStore(store);
     }
 
     public Menu getMenuById(UUID storeId, UUID menuId) {
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new StoreException(StoreErrorCode.STORE_NOT_FOUND));
 
-        return menuRepository.findByIdAndStoreAndTimeData_DeletedAtIsNull(menuId, store)
+        return menuRepository.findByIdAndStore(menuId, store)
                 .orElseThrow(() -> new MenuException(MenuErrorCode.MENU_NOT_FOUND));
     }
 }
