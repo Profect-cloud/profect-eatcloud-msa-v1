@@ -1,7 +1,6 @@
 package com.eatcloud.storeservice.domain.store.controller;
 
-
-import com.eatcloud.storeservice.common.ApiResponse;
+import com.eatcloud.autoresponse.core.ApiResponse;
 import com.eatcloud.storeservice.domain.store.dto.StoreKeywordSearchRequestDto;
 import com.eatcloud.storeservice.domain.store.dto.StoreSearchByMenuCategoryRequestDto;
 import com.eatcloud.storeservice.domain.store.dto.StoreSearchRequestDto;

@@ -1,6 +1,6 @@
 package com.eatcloud.storeservice.domain.menu.controller;
 
-import com.eatcloud.storeservice.common.ApiResponse;
+import com.eatcloud.autoresponse.core.ApiResponse;
 import com.eatcloud.storeservice.domain.menu.dto.MenuResponseDto;
 import com.eatcloud.storeservice.domain.menu.entity.Menu;
 import com.eatcloud.storeservice.domain.menu.service.MenuService;

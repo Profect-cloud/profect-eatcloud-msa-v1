@@ -39,7 +39,7 @@ public class AdminAssignService {
 						.managerEmail(app.getManagerEmail())
 						.storeName(app.getStoreName())
 						.status(app.getStatus())
-						.appliedAt(app.getTimeData().getCreatedAt())
+						.appliedAt(app.getCreatedAt())
 						.build())
 				.toList();
 	}
@@ -62,8 +62,8 @@ public class AdminAssignService {
 				.status(app.getStatus())
 				.reviewerAdminId(app.getReviewerAdminId())
 				.reviewComment(app.getReviewComment())
-				.appliedAt(app.getTimeData().getCreatedAt())
-				.updatedAt(app.getTimeData().getUpdatedAt())
+				.appliedAt(app.getCreatedAt())
+				.updatedAt(app.getUpdatedAt())
 				.build();
 	}
 

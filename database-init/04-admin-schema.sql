@@ -1,3 +1,5 @@
+\c admin_db;
+
 -- admin/schema.sql
 CREATE SCHEMA IF NOT EXISTS admin;
 SET search_path TO admin;
@@ -124,3 +126,4 @@ CREATE INDEX IF NOT EXISTS idx_mgrstore_store_category
 
 CREATE INDEX IF NOT EXISTS idx_mgrstore_reviewer
     ON p_manager_store_applications (reviewer_admin_id);
+

@@ -1,6 +1,5 @@
 package com.eatcloud.adminservice.domain.admin.controller;
 
-import com.eatcloud.adminservice.common.ApiResponse;
 import com.eatcloud.adminservice.domain.admin.dto.ManagerStoreApplicationDetailDto;
 import com.eatcloud.adminservice.domain.admin.dto.ManagerStoreApplicationSummaryDto;
 import com.eatcloud.adminservice.domain.admin.message.ResponseMessage;
@@ -13,7 +12,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-
+import com.eatcloud.autoresponse.core.ApiResponse;
 import java.util.List;
 import java.util.UUID;
 

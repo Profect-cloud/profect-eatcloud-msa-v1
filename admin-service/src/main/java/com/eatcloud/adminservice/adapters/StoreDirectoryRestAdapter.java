@@ -51,7 +51,7 @@ public class StoreDirectoryRestAdapter implements StoreDirectoryPort {
     }
 
     @Override
-    public void deleteById(UUID storeId) {
+    public void softDeleteById(UUID storeId) {
         try {
             storeDirectoryRestClient.delete()
                     .uri("/internal/admin/stores/{id}", storeId)

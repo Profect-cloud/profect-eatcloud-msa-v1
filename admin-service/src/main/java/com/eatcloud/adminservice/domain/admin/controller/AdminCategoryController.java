@@ -1,10 +1,11 @@
 package com.eatcloud.adminservice.domain.admin.controller;
 
-import com.eatcloud.adminservice.common.ApiResponse;
-import com.eatcloud.adminservice.common.ApiResponseStatus;
+
 import com.eatcloud.adminservice.domain.admin.dto.CategoryDto;
 import com.eatcloud.adminservice.domain.admin.message.ResponseMessage;
 import com.eatcloud.adminservice.domain.admin.service.GenericCategoryService;
+import com.eatcloud.autoresponse.core.ApiResponse;
+import com.eatcloud.autoresponse.core.ApiResponseStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;

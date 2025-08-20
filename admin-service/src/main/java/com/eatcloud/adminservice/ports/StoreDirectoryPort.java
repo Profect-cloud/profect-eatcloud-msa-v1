@@ -8,5 +8,5 @@ import java.util.UUID;
 public interface StoreDirectoryPort {
     List<StoreDto> findAll();
     StoreDto getById(UUID storeId);
-    void deleteById(UUID storeId);
+    void softDeleteById(UUID storeId);
 }

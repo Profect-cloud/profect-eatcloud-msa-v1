@@ -99,7 +99,7 @@ public class ManagerService {
         menuRepository.findById(menuId)
                 .orElseThrow(() -> new MenuException(MenuErrorCode.MENU_NOT_FOUND));
 
-        menuRepository.deleteById(menuId);
+        menuRepository.softDeleteById(menuId,"매니저");
     }
 
     public void updateStore(UUID storeId, StoreRequestDto dto) {

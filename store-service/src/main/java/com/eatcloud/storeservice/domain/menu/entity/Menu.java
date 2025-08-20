@@ -1,14 +1,17 @@
 package com.eatcloud.storeservice.domain.menu.entity;
 
+import com.eatcloud.autotime.BaseTimeEntity;
 import com.eatcloud.storeservice.domain.store.entity.Store;
-import com.eatcloud.storeservice.global.timeData.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
+
 import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
 @Table(name = "p_menus")
+@SQLRestriction("deleted_at is null")
 @Getter
 @Setter
 @NoArgsConstructor

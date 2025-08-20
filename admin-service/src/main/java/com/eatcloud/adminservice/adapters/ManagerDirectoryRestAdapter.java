@@ -51,7 +51,7 @@ public class ManagerDirectoryRestAdapter implements ManagerDirectoryPort {
     }
 
     @Override
-    public void deleteByEmail(String email) {
+    public void softDeleteByEmail(String email) {
         try {
             managerDirectoryRestClient.delete()
                     .uri(uri -> uri.path("/internal/admin/managers/by-email")

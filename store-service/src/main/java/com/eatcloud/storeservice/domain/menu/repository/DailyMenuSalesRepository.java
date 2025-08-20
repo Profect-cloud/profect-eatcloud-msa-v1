@@ -1,6 +1,7 @@
 
 package com.eatcloud.storeservice.domain.menu.repository;
 
+import com.eatcloud.autotime.repository.SoftDeleteRepository;
 import com.eatcloud.storeservice.domain.menu.entity.DailyMenuSales;
 import com.eatcloud.storeservice.domain.menu.entity.DailyMenuSalesId;
 import com.eatcloud.storeservice.domain.menu.entity.QDailyMenuSales;
@@ -9,7 +10,6 @@ import com.eatcloud.storeservice.domain.store.dto.MenuSalesAggregationDto;
 import com.eatcloud.storeservice.domain.store.entity.QStore;
 import com.eatcloud.storeservice.global.queryDSL.SoftDeletePredicates;
 import com.eatcloud.storeservice.global.queryDSL.SpringContext;
-import com.eatcloud.storeservice.global.timeData.BaseTimeRepository;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -17,7 +17,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-public interface DailyMenuSalesRepository extends BaseTimeRepository<DailyMenuSales, DailyMenuSalesId> {
+public interface DailyMenuSalesRepository extends SoftDeleteRepository<DailyMenuSales, DailyMenuSalesId> {
 
     default List<MenuSalesAggregationDto> getMenuSalesRanking(
             UUID storeId, LocalDate startDate, LocalDate endDate, int limit) {

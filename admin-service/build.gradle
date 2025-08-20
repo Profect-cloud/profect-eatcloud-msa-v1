@@ -94,6 +94,9 @@ dependencies {
 
     implementation "org.springframework.cloud:spring-cloud-starter-loadbalancer"
 
+    implementation(project(":auto-time"))
+    implementation project(':auto-response')
+
 }
 
 tasks.named('test') {
