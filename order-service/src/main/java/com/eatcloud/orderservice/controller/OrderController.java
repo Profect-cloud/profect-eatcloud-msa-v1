@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 
 import com.eatcloud.orderservice.dto.request.OrderStatusUpdateRequest;
 import com.eatcloud.orderservice.dto.request.CreateOrderRequest;
@@ -37,22 +39,22 @@ public class OrderController {
 
 	private final OrderService orderService;
 
-	// @PostMapping
-	// public ResponseEntity<ApiResponse<CreateOrderResponse>> createOrder(
-	// 		@RequestHeader("X-User-Id") String userId,
-	// 		@RequestBody CreateOrderRequest request) {
-	//
-	// 	try {
-	// 		UUID customerId = UUID.fromString(userId);
-	// 		CreateOrderResponse response = orderService.createOrderFromCart(customerId, request);
-	// 		return ResponseEntity.ok(ApiResponse.success(response));
-	// 	} catch (IllegalArgumentException e) {
-	// 		log.error("Invalid user ID format: {}", userId);
-	// 		return ResponseEntity.badRequest()
-	// 			.body(ApiResponse.error("유효하지 않은 사용자 ID입니다."));
-	// 	}
-	// 	// OrderException과 CartException은 GlobalExceptionHandler에서 처리
-	// }
+	@PostMapping
+	public ResponseEntity<ApiResponse<CreateOrderResponse>> createOrder(
+			@AuthenticationPrincipal Jwt jwt,
+			@RequestBody CreateOrderRequest request) {
+
+		try {
+			UUID customerId = UUID.fromString(jwt.getSubject());
+			CreateOrderResponse response = orderService.createOrderFromCartSimple(customerId, request);
+			return ResponseEntity.ok(ApiResponse.success(response));
+		} catch (IllegalArgumentException e) {
+			log.error("Invalid JWT subject format: {}", jwt != null ? jwt.getSubject() : "null");
+			return ResponseEntity.badRequest()
+				.body(ApiResponse.error("유효하지 않은 사용자 ID입니다."));
+		}
+		// OrderException과 CartException은 GlobalExceptionHandler에서 처리
+	}
 
 	@GetMapping("/{orderId}")
 	public ResponseEntity<Map<String, Object>> getOrder(@PathVariable UUID orderId) {

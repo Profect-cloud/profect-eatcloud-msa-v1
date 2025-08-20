@@ -162,10 +162,17 @@ public class OrderService {
         for (OrderMenu orderMenu : orderMenuList) {
             try {
                 Integer menuPrice = externalApiService.getMenuPrice(orderMenu.getMenuId());
-                orderMenu.setPrice(menuPrice);
+                if (menuPrice != null && menuPrice > 0) {
+                    orderMenu.setPrice(menuPrice);
+                } else {
+                    log.warn("Menu price is null/invalid for menuId: {}, keep cart price: {}",
+                            orderMenu.getMenuId(), orderMenu.getPrice());
+                }
             } catch (Exception e) {
-                log.error("Failed to get menu price for menuId: {}", orderMenu.getMenuId(), e);
-                throw new RuntimeException("메뉴 가격을 조회할 수 없습니다: " + orderMenu.getMenuId());
+                // log.error("Failed to get menu price for menuId: {}", orderMenu.getMenuId(), e);
+                // throw new RuntimeException("메뉴 가격을 조회할 수 없습니다: " + orderMenu.getMenuId());
+                log.warn("Store-service unavailable. Fallback to cart price for menuId: {}. reason={}",
+                        orderMenu.getMenuId(), e.getMessage());
             }
         }
 

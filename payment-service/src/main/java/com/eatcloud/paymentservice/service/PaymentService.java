@@ -103,6 +103,57 @@ public class PaymentService {
         return savedPayment;
     }
 
+    @Transactional
+    public Payment confirmPaymentMock(String paymentKey, String orderId, Integer amount, UUID optionalCustomerId) {
+        log.info("[MOCK] 결제 승인 처리: paymentKey={}, orderId={}, amount={}", paymentKey, orderId, amount);
+
+        UUID orderUuid = UUID.fromString(orderId);
+        PaymentRequest paymentRequest = paymentRequestRepository.findByOrderId(orderUuid)
+                .orElse(null);
+
+        UUID customerId = optionalCustomerId;
+        if (customerId == null) {
+            if (paymentRequest != null) {
+                customerId = paymentRequest.getCustomerId();
+            } else {
+                customerId = UUID.randomUUID();
+            }
+        }
+
+        Payment payment = Payment.builder()
+                .orderId(orderUuid)
+                .customerId(customerId)
+                .totalAmount(amount)
+                .pgTransactionId(paymentKey != null ? paymentKey : orderId)
+                .approvalCode(orderId)
+                .paymentStatus(PaymentStatus.COMPLETED)
+                .paymentMethod(getMethodByCodeOrThrow("CARD"))
+                .approvedAt(LocalDateTime.now())
+                .build();
+
+        Payment savedPayment = paymentRepository.save(payment);
+
+        if (paymentRequest != null) {
+            paymentRequest.updateStatus(PaymentRequestStatus.COMPLETED);
+            paymentRequestRepository.save(paymentRequest);
+        }
+
+        PaymentCreatedEvent event = PaymentCreatedEvent.builder()
+                .paymentId(savedPayment.getPaymentId())
+                .orderId(savedPayment.getOrderId())
+                .customerId(savedPayment.getCustomerId())
+                .totalAmount(savedPayment.getTotalAmount())
+                .paymentStatus(savedPayment.getPaymentStatus().name())
+                .paymentMethod(savedPayment.getPaymentMethod().getCode())
+                .approvedAt(savedPayment.getApprovedAt())
+                .build();
+
+        paymentEventProducer.publishPaymentCreated(event);
+
+        log.info("[MOCK] 결제 승인 완료: paymentId={}, orderId={}", savedPayment.getPaymentId(), orderId);
+        return savedPayment;
+    }
+
     private PaymentMethodCode getMethodByCodeOrThrow(String code) {
         return paymentMethodCodeRepository.findById(code)
             .orElseThrow(() -> new IllegalStateException("결제수단 코드가 없습니다: " + code));

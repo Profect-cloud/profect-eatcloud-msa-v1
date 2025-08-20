@@ -53,9 +53,12 @@ public class KafkaConfig {
         configProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         configProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
         configProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        configProps.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
-        
-        return new DefaultKafkaConsumerFactory<>(configProps);
+
+        JsonDeserializer<PaymentCreatedEvent> valueDeserializer = new JsonDeserializer<>(PaymentCreatedEvent.class);
+        valueDeserializer.addTrustedPackages("*");
+        valueDeserializer.setUseTypeHeaders(false);
+
+        return new DefaultKafkaConsumerFactory<>(configProps, new StringDeserializer(), valueDeserializer);
     }
     
     @Bean

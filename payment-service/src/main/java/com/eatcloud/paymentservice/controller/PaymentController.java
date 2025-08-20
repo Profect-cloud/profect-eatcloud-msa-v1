@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
 
 @RestController
 @RequestMapping("/api/v1/payments")
@@ -19,6 +21,8 @@ import java.util.Map;
 public class PaymentController {
     
     private final PaymentService paymentService;
+    @Value("${payment.mock.enabled:false}")
+    private boolean mockEnabled;
     
     @PostMapping("/confirm")
     @Operation(summary = "결제 승인", description = "토스페이먼츠 결제 승인을 처리합니다.")
@@ -27,10 +31,18 @@ public class PaymentController {
             String paymentKey = (String) request.get("paymentKey");
             String orderId = (String) request.get("orderId");
             Integer amount = (Integer) request.get("amount");
+            String customerIdStr = (String) request.get("customerId");
+            UUID optionalCustomerId = null;
+            if (customerIdStr != null && !customerIdStr.isBlank()) {
+                optionalCustomerId = UUID.fromString(customerIdStr);
+            }
             
             log.info("결제 승인 요청: paymentKey={}, orderId={}, amount={}", paymentKey, orderId, amount);
-            
-            paymentService.confirmPayment(paymentKey, orderId, amount);
+            if (mockEnabled) {
+                paymentService.confirmPaymentMock(paymentKey, orderId, amount, optionalCustomerId);
+            } else {
+                paymentService.confirmPayment(paymentKey, orderId, amount);
+            }
             
             return ResponseEntity.ok("결제가 성공적으로 처리되었습니다.");
             
