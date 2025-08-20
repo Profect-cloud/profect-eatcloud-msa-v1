@@ -1,6 +1,9 @@
 CREATE SCHEMA IF NOT EXISTS customer;
 SET search_path TO customer;
 
+DROP TABLE IF EXISTS p_addresses;
+DROP TABLE IF EXISTS p_customer;
+
 CREATE TABLE IF NOT EXISTS p_customer (
     id           UUID PRIMARY KEY,
     name         VARCHAR(20) UNIQUE NOT NULL,
