@@ -21,59 +21,59 @@ jobs:
       matrix: ${{ steps.changes.outputs.matrix }}
       has_changes: ${{ steps.changes.outputs.has_changes }}
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Detect changed services
-      id: changes
-      run: |
-        if [ "${{ github.event_name }}" = "pull_request" ]; then
-          # PR의 경우 base 브랜치와 비교
-          changed_files=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
-        else
-          # Push의 경우 이전 커밋과 비교
-          changed_files=$(git diff --name-only HEAD~1 HEAD)
-        fi
-        
-        echo "Changed files:"
-        echo "$changed_files"
-        
-        services=()
-        
-        # 각 서비스별로 변경사항 확인 (eureka-server, api-gateway 제외)
-        for service in auth-service customer-service admin-service manager-service store-service order-service payment-service; do
-          if echo "$changed_files" | grep -q "^$service/"; then
-            services+=("$service")
+      - name: Detect changed services
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # PR의 경우 base 브랜치와 비교
+            changed_files=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          else
+            # Push의 경우 이전 커밋과 비교
+            changed_files=$(git diff --name-only HEAD~1 HEAD)
           fi
-        done
-        
-        # 루트 레벨 변경사항 (모든 서비스에 영향)
-        if echo "$changed_files" | grep -qE "^(build\.gradle|settings\.gradle|docker-compose\.yml|gradle/|\.github/workflows/)"; then
-          services=(auth-service customer-service admin-service manager-service store-service order-service payment-service)
-        fi
-        
-        # 최초 커밋이나 서비스가 없는 경우 모든 서비스 빌드
-        if [ ${#services[@]} -eq 0 ]; then
-          services=(auth-service customer-service admin-service manager-service store-service order-service payment-service)
-        fi
-        
-        # JSON 배열로 변환
-        services_json=$(printf '%s\n' "${services[@]}" | jq -R -s -c 'split("\n")[:-1]')
-        echo "services=$services_json" >> $GITHUB_OUTPUT
-        
-        # Matrix 전략을 위한 형태로 변환
-        matrix_json=$(printf '%s\n' "${services[@]}" | jq -R -s -c '{"service": split("\n")[:-1]}')
-        echo "matrix=$matrix_json" >> $GITHUB_OUTPUT
-        
-        # 변경사항 여부
-        if [ ${#services[@]} -gt 0 ]; then
-          echo "has_changes=true" >> $GITHUB_OUTPUT
-        else
-          echo "has_changes=false" >> $GITHUB_OUTPUT
-        fi
-        
-        echo "Detected services: $services_json"
+          
+          echo "Changed files:"
+          echo "$changed_files"
+          
+          services=()
+          
+          # 각 서비스별로 변경사항 확인 (eureka-server, api-gateway 제외)
+          for service in auth-service customer-service admin-service manager-service store-service order-service payment-service; do
+            if echo "$changed_files" | grep -q "^$service/"; then
+              services+=("$service")
+            fi
+          done
+          
+          # 루트 레벨 변경사항 (모든 서비스에 영향)
+          if echo "$changed_files" | grep -qE "^(build\.gradle|settings\.gradle|docker-compose\.yml|gradle/|\.github/workflows/)"; then
+            services=(auth-service customer-service admin-service manager-service store-service order-service payment-service)
+          fi
+          
+          # 최초 커밋이나 서비스가 없는 경우 모든 서비스 빌드
+          if [ ${#services[@]} -eq 0 ]; then
+            services=(auth-service customer-service admin-service manager-service store-service order-service payment-service)
+          fi
+          
+          # JSON 배열로 변환
+          services_json=$(printf '%s\n' "${services[@]}" | jq -R -s -c 'split("\n")[:-1]')
+          echo "services=$services_json" >> $GITHUB_OUTPUT
+          
+          # Matrix 전략을 위한 형태로 변환
+          matrix_json=$(printf '%s\n' "${services[@]}" | jq -R -s -c '{"service": split("\n")[:-1]}')
+          echo "matrix=$matrix_json" >> $GITHUB_OUTPUT
+          
+          # 변경사항 여부
+          if [ ${#services[@]} -gt 0 ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "Detected services: $services_json"
 
   # 테스트 및 빌드
   test-and-build:
@@ -85,48 +85,48 @@ jobs:
       fail-fast: false
     
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up JDK 21
-      uses: actions/setup-java@v4
-      with:
-        java-version: '21'
-        distribution: 'temurin'
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
 
-    - name: Cache Gradle packages
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
 
-    - name: Test ${{ matrix.service }}
-      run: ./gradlew :${{ matrix.service }}:test
-      continue-on-error: true
+      - name: Test ${{ matrix.service }}
+        run: ./gradlew :${{ matrix.service }}:test
+        continue-on-error: true
 
-    - name: Build ${{ matrix.service }}
-      run: ./gradlew :${{ matrix.service }}:bootJar
+      - name: Build ${{ matrix.service }}
+        run: ./gradlew :${{ matrix.service }}:bootJar
 
-    - name: Upload test results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: test-results-${{ matrix.service }}-${{ github.sha }}
-        path: ${{ matrix.service }}/build/reports/tests/
-        retention-days: 7
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.service }}-${{ github.sha }}
+          path: ${{ matrix.service }}/build/reports/tests/
+          retention-days: 7
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: jar-${{ matrix.service }}-${{ github.sha }}
-        path: ${{ matrix.service }}/build/libs/*.jar
-        retention-days: 30
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: jar-${{ matrix.service }}-${{ github.sha }}
+          path: ${{ matrix.service }}/build/libs/*.jar
+          retention-days: 30
 
   # ECR에 Docker 이미지 빌드 및 푸시
   build-and-push-ecr:
@@ -138,58 +138,58 @@ jobs:
       fail-fast: false
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: jar-${{ matrix.service }}-${{ github.sha }}
-        path: ${{ matrix.service }}/build/libs/
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: jar-${{ matrix.service }}-${{ github.sha }}
+          path: ${{ matrix.service }}/build/libs/
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v2
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-    - name: Create ECR repository if not exists
-      run: |
-        aws ecr describe-repositories --repository-names eatcloud/${{ matrix.service }} || \
-        aws ecr create-repository \
-          --repository-name eatcloud/${{ matrix.service }} \
-          --image-scanning-configuration scanOnPush=true \
-          --encryption-configuration encryptionType=AES256
+      - name: Create ECR repository if not exists
+        run: |
+          aws ecr describe-repositories --repository-names eatcloud/${{ matrix.service }} || \
+          aws ecr create-repository \
+            --repository-name eatcloud/${{ matrix.service }} \
+            --image-scanning-configuration scanOnPush=true \
+            --encryption-configuration encryptionType=AES256
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    # 짧은 SHA 값을 별도 스텝에서 생성
-    - name: Generate short SHA
-      id: short-sha
-      run: echo "sha_short=$(echo ${{ github.sha }} | cut -c1-8)" >> $GITHUB_OUTPUT
+      # 짧은 SHA 값을 별도 스텝에서 생성
+      - name: Generate short SHA
+        id: short-sha
+        run: echo "sha_short=$(echo ${{ github.sha }} | cut -c1-8)" >> $GITHUB_OUTPUT
 
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ${{ matrix.service }}/Dockerfile
-        push: true
-        tags: |
-          ${{ env.ECR_REGISTRY }}/eatcloud/${{ matrix.service }}:latest
-          ${{ env.ECR_REGISTRY }}/eatcloud/${{ matrix.service }}:${{ github.sha }}
-          ${{ env.ECR_REGISTRY }}/eatcloud/${{ matrix.service }}:${{ steps.short-sha.outputs.sha_short }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        platforms: linux/arm64
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.service }}/Dockerfile
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/eatcloud/${{ matrix.service }}:latest
+            ${{ env.ECR_REGISTRY }}/eatcloud/${{ matrix.service }}:${{ github.sha }}
+            ${{ env.ECR_REGISTRY }}/eatcloud/${{ matrix.service }}:${{ steps.short-sha.outputs.sha_short }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/arm64
 
-    - name: Scan image for vulnerabilities
-      run: |
-        aws ecr start-image-scan --repository-name eatcloud/${{ matrix.service }} --image-id imageTag=latest || true
+      - name: Scan image for vulnerabilities
+        run: |
+          aws ecr start-image-scan --repository-name eatcloud/${{ matrix.service }} --image-id imageTag=latest || true
 
   # Staging 자동 배포 (develop 브랜치)
   deploy-staging:
@@ -202,46 +202,31 @@ jobs:
       fail-fast: false
     
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-    - name: Deploy to ECS Staging
-      run: |
-        # 현재 태스크 정의 가져오기
-        TASK_DEFINITION=$(aws ecs describe-task-definition \
-          --task-definition ${{ matrix.service }} \
-          --query 'taskDefinition')
-        
-        # 새 이미지 URI로 업데이트
-        NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "${{ env.ECR_REGISTRY }}/eatcloud/${{ matrix.service }}:${{ github.sha }}" \
-          '.containerDefinitions[0].image = $IMAGE | del(.taskDefinitionArn) | del(.revision) | del(.status) | del(.requiresAttributes) | del(.placementConstraints) | del(.compatibilities) | del(.registeredAt) | del(.registeredBy)')
-        
-        # 새 태스크 정의 등록
-        NEW_REVISION=$(aws ecs register-task-definition \
-          --cli-input-json "$NEW_TASK_DEFINITION" \
-          --query 'taskDefinition.revision')
-        
-        # 서비스 업데이트 (새 태스크 정의 사용)
-        aws ecs update-service \
-          --cluster ${{ env.ECS_CLUSTER_STAGING }} \
-          --service ${{ matrix.service }} \
-          --task-definition ${{ matrix.service }}:$NEW_REVISION \
-          --force-new-deployment \
-          --query 'service.{ServiceName:serviceName,Status:status,TaskDefinition:taskDefinition}'
+      - name: Deploy to ECS Staging
+        run: |
+          # ECS 서비스 강제 새 배포
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER_STAGING }} \
+            --service ${{ matrix.service }} \
+            --force-new-deployment \
+            --query 'service.{ServiceName:serviceName,Status:status,TaskDefinition:taskDefinition}'
 
-    - name: Wait for deployment to complete
-      run: |
-        aws ecs wait services-stable \
-          --cluster ${{ env.ECS_CLUSTER_STAGING }} \
-          --services ${{ matrix.service }}
-        
-        echo "✅ ${{ matrix.service }} staging deployment completed"
+      - name: Wait for deployment to complete
+        run: |
+          aws ecs wait services-stable \
+            --cluster ${{ env.ECS_CLUSTER_STAGING }} \
+            --services ${{ matrix.service }}
+          
+          echo "✅ ${{ matrix.service }} staging deployment completed"
 
   # Production 수동 배포 준비 알림
   production-deploy-ready:
@@ -250,17 +235,17 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Production deployment notification
-      run: |
-        echo "🚀 Production deployment ready!"
-        echo "Services: ${{ needs.detect-changes.outputs.services }}"
-        echo "Image SHA: ${{ github.sha }}"
-        echo "ECR Images:"
-        echo "${{ needs.detect-changes.outputs.services }}" | jq -r '.[]' | while read service; do
-          echo "  - ${{ env.ECR_REGISTRY }}/eatcloud/${service}:${{ github.sha }}"
-        done
-        echo ""
-        echo "To deploy to production:"
-        echo "1. Go to Actions tab"
-        echo "2. Run 'Deploy to Production (ECR + ECS)' workflow"
-        echo "3. Select services and image tag: ${{ github.sha }}"
+      - name: Production deployment notification
+        run: |
+          echo "🚀 Production deployment ready!"
+          echo "Services: ${{ needs.detect-changes.outputs.services }}"
+          echo "Image SHA: ${{ github.sha }}"
+          echo "ECR Images:"
+          echo "${{ needs.detect-changes.outputs.services }}" | jq -r '.[]' | while read service; do
+            echo "  - ${{ env.ECR_REGISTRY }}/eatcloud/${service}:${{ github.sha }}"
+          done
+          echo ""
+          echo "To deploy to production:"
+          echo "1. Go to Actions tab"
+          echo "2. Run 'Deploy to Production (ECR + ECS)' workflow"
+          echo "3. Select services and image tag: ${{ github.sha }}"
