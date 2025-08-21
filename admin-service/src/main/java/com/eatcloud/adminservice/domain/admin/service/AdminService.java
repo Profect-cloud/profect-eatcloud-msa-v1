@@ -1,8 +1,11 @@
 package com.eatcloud.adminservice.domain.admin.service;
 
+import com.eatcloud.adminservice.domain.admin.dto.AdminDto;
 import com.eatcloud.adminservice.domain.admin.dto.ManagerDto;
 import com.eatcloud.adminservice.domain.admin.dto.StoreDto;
 import com.eatcloud.adminservice.domain.admin.dto.UserDto;
+import com.eatcloud.adminservice.domain.admin.entity.Admin;
+import com.eatcloud.adminservice.domain.admin.repository.AdminRepository;
 import com.eatcloud.adminservice.ports.CustomerAdminPort;
 import com.eatcloud.adminservice.ports.ManagerDirectoryPort;
 import com.eatcloud.adminservice.ports.StoreDirectoryPort;
@@ -19,6 +22,7 @@ public class AdminService {
 	private final CustomerAdminPort customerPort;
 	private final ManagerDirectoryPort managerPort;
 	private final StoreDirectoryPort storePort;
+	private final AdminRepository adminRepository;
 
 	// ============ Customers ============
 	public List<UserDto> getAllCustomers() {
@@ -57,5 +61,18 @@ public class AdminService {
 
 	public void deleteStore(UUID storeId) {
 		storePort.softDeleteById(storeId);
+	}
+
+	public AdminDto findByEmail(String email) {
+		Admin admin = adminRepository.findByEmail(email)
+				.orElseThrow(() -> new RuntimeException("Admin not found"));
+
+		return 	AdminDto.builder()
+				.id(admin.getId())
+				.email(admin.getEmail())
+				.password(admin.getPassword())
+				.name(admin.getName())
+				.role("admin")
+				.build();
 	}
 }

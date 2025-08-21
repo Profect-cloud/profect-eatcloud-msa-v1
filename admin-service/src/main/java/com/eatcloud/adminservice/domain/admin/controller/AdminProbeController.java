@@ -9,7 +9,7 @@ import java.util.Map;
 
 // admin-service / api/AdminProbeController.java
 @RestController
-@RequestMapping("/api/v1/admin/_probe")
+@RequestMapping("/admin/_probe")
 @RequiredArgsConstructor
 public class AdminProbeController {
 

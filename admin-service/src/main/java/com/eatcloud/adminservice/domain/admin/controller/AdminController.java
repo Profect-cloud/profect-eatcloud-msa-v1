@@ -1,5 +1,6 @@
 package com.eatcloud.adminservice.domain.admin.controller;
 
+import com.eatcloud.adminservice.domain.admin.dto.AdminDto;
 import com.eatcloud.adminservice.domain.admin.dto.ManagerDto;
 import com.eatcloud.adminservice.domain.admin.dto.StoreDto;
 import com.eatcloud.adminservice.domain.admin.dto.UserDto;
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -101,6 +103,12 @@ public class AdminController {
 	public ApiResponse<ResponseMessage> deleteStore(@PathVariable UUID storeId) {
 		adminService.deleteStore(storeId);
 		return ApiResponse.success(ResponseMessage.STORE_DELETE_SUCCESS);
+	}
+
+	@GetMapping("/search")
+	public ResponseEntity<AdminDto> searchByEmail(@RequestParam String email) {
+		AdminDto adminDto = adminService.findByEmail(email);
+		return ResponseEntity.ok(adminDto);
 	}
 
 }
