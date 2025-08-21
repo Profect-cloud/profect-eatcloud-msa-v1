@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @Entity
-@Table(name = "payments")
+@Table(name = "p_payments")
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
@@ -50,10 +50,10 @@ public class Payment {
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", nullable = false)
     private PaymentStatus paymentStatus;
-    
-    @Enumerated(EnumType.STRING)
-    @Column(name = "payment_method", nullable = false)
-    private PaymentMethod paymentMethod;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "payment_method", referencedColumnName = "code")
+    private PaymentMethodCode paymentMethod;
     
     @Column(name = "requested_at", nullable = false)
     private LocalDateTime requestedAt;
@@ -66,27 +66,15 @@ public class Payment {
     
     @Column(name = "failure_reason", columnDefinition = "TEXT")
     private String failureReason;
-    
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
-    
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-    
+
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
         requestedAt = LocalDateTime.now();
         if (paymentStatus == null) {
             paymentStatus = PaymentStatus.PENDING;
         }
     }
-    
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
-    
+
     public void updateStatus(PaymentStatus status) {
         this.paymentStatus = status;
     }

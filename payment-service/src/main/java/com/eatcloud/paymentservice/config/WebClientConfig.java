@@ -10,7 +10,7 @@ public class WebClientConfig {
     @Bean
     public WebClient tossWebClient() {
         return WebClient.builder()
-                .baseUrl("https://api.tosspayments.com")
+                .baseUrl("https://api.tosspayments.com/v1")
                 .build();
     }
 } 

@@ -1,11 +1,12 @@
 package com.eatcloud.paymentservice.service;
 
 import com.eatcloud.paymentservice.entity.Payment;
+import com.eatcloud.paymentservice.entity.PaymentMethodCode;
 import com.eatcloud.paymentservice.entity.PaymentRequest;
-import com.eatcloud.paymentservice.entity.PaymentMethod;
 import com.eatcloud.paymentservice.entity.PaymentStatus;
 import com.eatcloud.paymentservice.entity.PaymentRequestStatus;
 import com.eatcloud.paymentservice.event.PaymentCreatedEvent;
+import com.eatcloud.paymentservice.repository.PaymentMethodCodeRepository;
 import com.eatcloud.paymentservice.repository.PaymentRepository;
 import com.eatcloud.paymentservice.repository.PaymentRequestRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +28,8 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final PaymentRequestRepository paymentRequestRepository;
     private final TossPaymentService tossPaymentService;
-    // private final PaymentEventProducer paymentEventProducer;
+    private final PaymentMethodCodeRepository paymentMethodCodeRepository;
+    private final PaymentEventProducer paymentEventProducer;
     
     private static final long PAYMENT_TIMEOUT_MINUTES = 5;
     
@@ -90,29 +92,85 @@ public class PaymentService {
                 .customerId(savedPayment.getCustomerId())
                 .totalAmount(savedPayment.getTotalAmount())
                 .paymentStatus(savedPayment.getPaymentStatus().name())
-                .paymentMethod(savedPayment.getPaymentMethod().name())
+                .paymentMethod(savedPayment.getPaymentMethod().getCode())
                 .approvedAt(savedPayment.getApprovedAt())
-                .createdAt(savedPayment.getCreatedAt())
                 .build();
         
-        // paymentEventProducer.publishPaymentCreated(event);
+        paymentEventProducer.publishPaymentCreated(event);
         
         log.info("결제 승인 완료: paymentId={}, orderId={}", savedPayment.getPaymentId(), orderId);
         
         return savedPayment;
     }
-    
-    private PaymentMethod mapTossMethodToPaymentMethod(String tossMethod) {
-        if (tossMethod == null) return PaymentMethod.CARD;
-        
-        return switch (tossMethod) {
-            case "카드" -> PaymentMethod.CARD;
-            case "가상계좌" -> PaymentMethod.VIRTUAL_ACCOUNT;
-            case "계좌이체" -> PaymentMethod.TRANSFER;
-            case "휴대폰" -> PaymentMethod.PHONE;
-            case "상품권", "도서문화상품권", "게임문화상품권" -> PaymentMethod.GIFT_CERTIFICATE;
-            default -> PaymentMethod.CARD;
+
+    @Transactional
+    public Payment confirmPaymentMock(String paymentKey, String orderId, Integer amount, UUID optionalCustomerId) {
+        log.info("[MOCK] 결제 승인 처리: paymentKey={}, orderId={}, amount={}", paymentKey, orderId, amount);
+
+        UUID orderUuid = UUID.fromString(orderId);
+        PaymentRequest paymentRequest = paymentRequestRepository.findByOrderId(orderUuid)
+                .orElse(null);
+
+        UUID customerId = optionalCustomerId;
+        if (customerId == null) {
+            if (paymentRequest != null) {
+                customerId = paymentRequest.getCustomerId();
+            } else {
+                customerId = UUID.randomUUID();
+            }
+        }
+
+        Payment payment = Payment.builder()
+                .orderId(orderUuid)
+                .customerId(customerId)
+                .totalAmount(amount)
+                .pgTransactionId(paymentKey != null ? paymentKey : orderId)
+                .approvalCode(orderId)
+                .paymentStatus(PaymentStatus.COMPLETED)
+                .paymentMethod(getMethodByCodeOrThrow("CARD"))
+                .approvedAt(LocalDateTime.now())
+                .build();
+
+        Payment savedPayment = paymentRepository.save(payment);
+
+        if (paymentRequest != null) {
+            paymentRequest.updateStatus(PaymentRequestStatus.COMPLETED);
+            paymentRequestRepository.save(paymentRequest);
+        }
+
+        PaymentCreatedEvent event = PaymentCreatedEvent.builder()
+                .paymentId(savedPayment.getPaymentId())
+                .orderId(savedPayment.getOrderId())
+                .customerId(savedPayment.getCustomerId())
+                .totalAmount(savedPayment.getTotalAmount())
+                .paymentStatus(savedPayment.getPaymentStatus().name())
+                .paymentMethod(savedPayment.getPaymentMethod().getCode())
+                .approvedAt(savedPayment.getApprovedAt())
+                .build();
+
+        paymentEventProducer.publishPaymentCreated(event);
+
+        log.info("[MOCK] 결제 승인 완료: paymentId={}, orderId={}", savedPayment.getPaymentId(), orderId);
+        return savedPayment;
+    }
+
+    private PaymentMethodCode getMethodByCodeOrThrow(String code) {
+        return paymentMethodCodeRepository.findById(code)
+            .orElseThrow(() -> new IllegalStateException("결제수단 코드가 없습니다: " + code));
+    }
+
+    private PaymentMethodCode mapTossMethodToPaymentMethod(String tossMethod) {
+        if (tossMethod == null) return getMethodByCodeOrThrow("CARD");
+
+        String code = switch (tossMethod) {
+            case "카드" -> "CARD";
+            case "가상계좌" -> "VIRTUAL_ACCOUNT";
+            case "계좌이체" -> "TRANSFER";
+            case "휴대폰" -> "PHONE";
+            case "상품권", "도서문화상품권", "게임문화상품권" -> "GIFT_CERTIFICATE";
+            default -> "CARD";
         };
+        return getMethodByCodeOrThrow(code);
     }
     
     @Async

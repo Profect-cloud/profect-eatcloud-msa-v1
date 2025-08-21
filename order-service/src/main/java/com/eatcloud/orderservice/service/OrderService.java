@@ -37,6 +37,7 @@ public class OrderService {
     private final OrderTypeCodeRepository orderTypeCodeRepository;
     private final ExternalApiService externalApiService;
     private final DistributedLockService distributedLockService;
+    private final OrderEventProducer orderEventProducer;
     @Lazy
     // private final SagaOrchestrator sagaOrchestrator;
 
@@ -95,6 +96,30 @@ public class OrderService {
                         request.getPointsToUse()
                     );
 
+                    // 이벤트 발행 (주문 생성)
+                    try {
+                        com.eatcloud.orderservice.event.OrderCreatedEvent event =
+                            com.eatcloud.orderservice.event.OrderCreatedEvent.builder()
+                                .orderId(order.getOrderId())
+                                .customerId(order.getCustomerId())
+                                .storeId(order.getStoreId())
+                                .totalAmount(order.getTotalPrice())
+                                .finalAmount(order.getFinalPaymentAmount())
+                                .pointsToUse(order.getPointsToUse())
+                                .orderItems(orderMenuList.stream()
+                                    .map(m -> com.eatcloud.orderservice.event.OrderCreatedEvent.OrderItemEvent.builder()
+                                        .menuId(m.getMenuId())
+                                        .menuName(m.getMenuName())
+                                        .quantity(m.getQuantity())
+                                        .unitPrice(m.getPrice())
+                                        .build())
+                                    .collect(java.util.stream.Collectors.toList()))
+                                .build();
+                        orderEventProducer.publishOrderCreated(event);
+                    } catch (Exception publishEx) {
+                        log.error("주문 생성 이벤트 발행 실패: orderId={}", order.getOrderId(), publishEx);
+                    }
+
                     // 장바구니 비우기
                     try {
                         cartService.clearCart(customerId);
@@ -137,10 +162,17 @@ public class OrderService {
         for (OrderMenu orderMenu : orderMenuList) {
             try {
                 Integer menuPrice = externalApiService.getMenuPrice(orderMenu.getMenuId());
-                orderMenu.setPrice(menuPrice);
+                if (menuPrice != null && menuPrice > 0) {
+                    orderMenu.setPrice(menuPrice);
+                } else {
+                    log.warn("Menu price is null/invalid for menuId: {}, keep cart price: {}",
+                            orderMenu.getMenuId(), orderMenu.getPrice());
+                }
             } catch (Exception e) {
-                log.error("Failed to get menu price for menuId: {}", orderMenu.getMenuId(), e);
-                throw new RuntimeException("메뉴 가격을 조회할 수 없습니다: " + orderMenu.getMenuId());
+                // log.error("Failed to get menu price for menuId: {}", orderMenu.getMenuId(), e);
+                // throw new RuntimeException("메뉴 가격을 조회할 수 없습니다: " + orderMenu.getMenuId());
+                log.warn("Store-service unavailable. Fallback to cart price for menuId: {}. reason={}",
+                        orderMenu.getMenuId(), e.getMessage());
             }
         }
 

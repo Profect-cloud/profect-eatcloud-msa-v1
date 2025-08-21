@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "payment_requests")
+@Table(name = "p_payment_requests")
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
@@ -53,24 +53,12 @@ public class PaymentRequest {
     @Column(name = "timeout_at")
     private LocalDateTime timeoutAt;
     
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
-    
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-    
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
         requestedAt = LocalDateTime.now();
         if (status == null) {
             status = PaymentRequestStatus.PENDING;
         }
-    }
-    
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
     }
     
     public void updateStatus(PaymentRequestStatus status) {

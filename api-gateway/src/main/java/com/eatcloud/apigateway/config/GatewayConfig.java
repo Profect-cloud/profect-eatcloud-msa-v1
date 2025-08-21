@@ -61,11 +61,24 @@ public class GatewayConfig {
 					.addRequestHeader("X-Service-Name", "order-service"))
 				.uri("lb://order-service"))
 
-			// Payment Service Routes
+			// Payment Service Routes (API)
 			.route("payment-service", r -> r
 				.path("/api/v1/payments/**")
 				.filters(f -> f
-					.stripPrefix(2)
+					.addRequestHeader("X-Service-Name", "payment-service"))
+				.uri("lb://payment-service"))
+
+			// Payment View Routes (serve Thymeleaf views through gateway)
+			.route("payment-service-views", r -> r
+				.path("/payments/**")
+				.filters(f -> f
+					.addRequestHeader("X-Service-Name", "payment-service"))
+				.uri("lb://payment-service"))
+
+			// Payment Callbacks (success/fail/cancel)
+			.route("payment-service-callbacks", r -> r
+				.path("/api/v1/payment/**")
+				.filters(f -> f
 					.addRequestHeader("X-Service-Name", "payment-service"))
 				.uri("lb://payment-service"))
 
