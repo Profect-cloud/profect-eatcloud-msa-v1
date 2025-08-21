@@ -24,8 +24,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import com.eatcloud.customerservice.dto.request.AddressRequestDto;
 import com.eatcloud.customerservice.dto.response.AddressResponseDto;
-import com.eatcloud.customerservice.exception.CustomerErrorCode;
-import com.eatcloud.customerservice.exception.CustomerException;
+import com.eatcloud.customerservice.error.CustomerErrorCode;
+import com.eatcloud.autoresponse.error.BusinessException;
 import com.eatcloud.customerservice.message.ResponseMessage;
 import com.eatcloud.customerservice.service.AddressService;
 
@@ -44,7 +44,7 @@ public class AddressController {
 		try {
 			return UUID.fromString(jwt.getSubject());
 		} catch (IllegalArgumentException e) {
-			throw new CustomerException(CustomerErrorCode.INVALID_CUSTOMER_ID);
+			throw new BusinessException(CustomerErrorCode.INVALID_CUSTOMER_ID);
 		}
 	}
 
@@ -55,11 +55,11 @@ public class AddressController {
 	})
 	@GetMapping
 	@ResponseStatus(HttpStatus.OK)
-	public com.eatcloud.customerservice.common.ApiResponse<List<AddressResponseDto>> getAddressList(
+	public com.eatcloud.autoresponse.core.ApiResponse<List<AddressResponseDto>> getAddressList(
 		@AuthenticationPrincipal Jwt jwt) {
 		UUID customerId = getCustomerUuid(jwt);
 		List<AddressResponseDto> addresses = addressService.getAddressList(customerId);
-		return com.eatcloud.customerservice.common.ApiResponse.success(addresses);
+		return com.eatcloud.autoresponse.core.ApiResponse.success(addresses);
 	}
 
 	@Operation(summary = "2. 배송지 등록", description = "새로운 배송지를 등록합니다.")
@@ -70,12 +70,12 @@ public class AddressController {
 	})
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
-	public com.eatcloud.customerservice.common.ApiResponse<List<AddressResponseDto>> createAddress(
+	public com.eatcloud.autoresponse.core.ApiResponse<List<AddressResponseDto>> createAddress(
 		@AuthenticationPrincipal Jwt jwt,
 		@Valid @RequestBody AddressRequestDto request) {
 		UUID customerId = getCustomerUuid(jwt);
 		AddressResponseDto response = addressService.createAddress(customerId, request);
-		return com.eatcloud.customerservice.common.ApiResponse.created(Collections.singletonList(response));
+		return com.eatcloud.autoresponse.core.ApiResponse.created(Collections.singletonList(response));
 	}
 
 	@Operation(summary = "3. 배송지 수정", description = "기존 배송지 정보를 수정합니다.")
@@ -87,13 +87,13 @@ public class AddressController {
 	})
 	@PutMapping("/{addressId}")
 	@ResponseStatus(HttpStatus.OK)
-	public com.eatcloud.customerservice.common.ApiResponse<List<AddressResponseDto>> updateAddress(
+	public com.eatcloud.autoresponse.core.ApiResponse<List<AddressResponseDto>> updateAddress(
 		@AuthenticationPrincipal Jwt jwt,
 		@PathVariable UUID addressId,
 		@Valid @RequestBody AddressRequestDto request) {
 		UUID customerId = getCustomerUuid(jwt);
 		AddressResponseDto response = addressService.updateAddress(customerId, addressId, request);
-		return com.eatcloud.customerservice.common.ApiResponse.success(Collections.singletonList(response));
+		return com.eatcloud.autoresponse.core.ApiResponse.success(Collections.singletonList(response));
 	}
 
 	@Operation(summary = "4. 배송지 삭제", description = "배송지를 삭제합니다.")
@@ -104,12 +104,12 @@ public class AddressController {
 	})
 	@DeleteMapping("/{addressId}")
 	@ResponseStatus(HttpStatus.OK)
-	public com.eatcloud.customerservice.common.ApiResponse<ResponseMessage> deleteAddress(
+	public com.eatcloud.autoresponse.core.ApiResponse<ResponseMessage> deleteAddress(
 		@AuthenticationPrincipal Jwt jwt,
 		@PathVariable UUID addressId) {
 		UUID customerId = getCustomerUuid(jwt);
 		addressService.deleteAddress(customerId, addressId);
-		return com.eatcloud.customerservice.common.ApiResponse.success(ResponseMessage.ADDRESS_DELETE_SUCCESS);
+		return com.eatcloud.autoresponse.core.ApiResponse.success(ResponseMessage.ADDRESS_DELETE_SUCCESS);
 	}
 
 	@Operation(summary = "5. 기본 배송지 설정", description = "선택한 배송지를 기본 배송지로 설정합니다.")
@@ -120,12 +120,12 @@ public class AddressController {
 	})
 	@PutMapping("/{addressId}/select")
 	@ResponseStatus(HttpStatus.OK)
-	public com.eatcloud.customerservice.common.ApiResponse<ResponseMessage> setDefaultAddress(
+	public com.eatcloud.autoresponse.core.ApiResponse<ResponseMessage> setDefaultAddress(
 		@AuthenticationPrincipal Jwt jwt,
 		@PathVariable UUID addressId) {
 		UUID customerId = getCustomerUuid(jwt);
 		addressService.setDefaultAddress(customerId, addressId);
-		return com.eatcloud.customerservice.common.ApiResponse.success(ResponseMessage.ADDRESS_SELECT_SUCCESS);
+		return com.eatcloud.autoresponse.core.ApiResponse.success(ResponseMessage.ADDRESS_SELECT_SUCCESS);
 	}
 
 }

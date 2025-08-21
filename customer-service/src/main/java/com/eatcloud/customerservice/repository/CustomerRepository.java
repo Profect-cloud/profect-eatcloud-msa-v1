@@ -3,11 +3,10 @@ package com.eatcloud.customerservice.repository;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.eatcloud.autotime.repository.SoftDeleteRepository;
 import com.eatcloud.customerservice.entity.Customer;
-import com.eatcloud.customerservice.global.timeData.BaseTimeRepository;
 
-
-public interface CustomerRepository extends BaseTimeRepository<Customer, UUID> {
+public interface CustomerRepository extends SoftDeleteRepository<Customer, UUID> {
 	Optional<Customer> findByEmail(String email);
 
 	Optional<Customer> findByNameAndTimeData_DeletedAtIsNull(String name);

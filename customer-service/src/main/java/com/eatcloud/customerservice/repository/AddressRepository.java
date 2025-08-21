@@ -7,10 +7,11 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.Query;
 
 import io.lettuce.core.dynamic.annotation.Param;
-import com.eatcloud.customerservice.entity.Address;
-import com.eatcloud.customerservice.global.timeData.BaseTimeRepository;
 
-public interface AddressRepository extends BaseTimeRepository<Address, UUID> {
+import com.eatcloud.autotime.repository.SoftDeleteRepository;
+import com.eatcloud.customerservice.entity.Address;
+
+public interface AddressRepository extends SoftDeleteRepository<Address, UUID> {
 	List<Address> findByCustomerIdAndTimeData_DeletedAtIsNull(UUID customerId);
 
 	Optional<Address> findByCustomerIdAndIsSelectedTrueAndTimeData_DeletedAtIsNull(UUID customerId);
