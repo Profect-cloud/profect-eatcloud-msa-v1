@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "payment_requests")
+@Table(name = "p_payment_requests")
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
