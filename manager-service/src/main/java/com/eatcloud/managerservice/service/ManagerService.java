@@ -3,6 +3,7 @@ package com.eatcloud.managerservice.service;
 import java.util.Collection;
 import java.util.UUID;
 
+import com.eatcloud.managerservice.dto.ManagerLoginDto;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +45,19 @@ public class ManagerService {
 			.orElseThrow(() -> new com.eatcloud.autoresponse.error.BusinessException(
 				ManagerErrorCode.MANAGER_NOT_FOUND));
 		return ManagerDto.from(e); // 또는 Mapper 사용
+	}
+
+	public ManagerLoginDto findByEmail(String email) {
+		Manager manager = managerRepository.findByEmail(email)
+				.orElseThrow(() -> new RuntimeException("Manager not found"));
+
+		return ManagerLoginDto.builder()
+				.id(manager.getId())
+				.email(manager.getEmail())
+				.password(manager.getPassword())
+				.name(manager.getName())
+				.role("manager")
+				.build();
 	}
 }
 

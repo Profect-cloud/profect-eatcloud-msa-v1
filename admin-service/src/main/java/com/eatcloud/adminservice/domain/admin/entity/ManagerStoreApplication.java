@@ -9,7 +9,7 @@ import org.hibernate.annotations.SQLRestriction;
 import java.util.UUID;
 
 @Entity
-@Table(name = "p_manager_store_applications")
+@Table(schema = "admin",name = "p_manager_store_applications")
 @SQLRestriction("deleted_at is null")
 @Getter
 @Setter

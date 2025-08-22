@@ -33,7 +33,6 @@ public class GatewayConfig {
 			.route("admin-service", r -> r
 				.path("/api/v1/admin/**")
 				.filters(f -> f
-					.stripPrefix(2)
 					.addRequestHeader("X-Service-Name", "admin-service"))
 				.uri("lb://admin-service"))
 
@@ -41,7 +40,6 @@ public class GatewayConfig {
 			.route("manager-service", r -> r
 				.path("/api/v1/manager/**")
 				.filters(f -> f
-					.stripPrefix(2)
 					.addRequestHeader("X-Service-Name", "manager-service"))
 				.uri("lb://manager-service"))
 
@@ -49,7 +47,6 @@ public class GatewayConfig {
 			.route("store-service", r -> r
 				.path("/api/v1/stores/**")
 				.filters(f -> f
-					.stripPrefix(2)
 					.addRequestHeader("X-Service-Name", "store-service"))
 				.uri("lb://store-service"))
 

@@ -6,17 +6,12 @@ import com.eatcloud.autoresponse.core.ApiResponse;
 import com.eatcloud.autoresponse.error.BusinessException;
 import com.eatcloud.managerservice.dto.ManagerCreateRequest;
 import com.eatcloud.managerservice.dto.ManagerDto;
+import com.eatcloud.managerservice.dto.ManagerLoginDto;
 import com.eatcloud.managerservice.service.ManagerService;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import lombok.RequiredArgsConstructor;
 
@@ -45,6 +40,12 @@ public class ManagerController {
 	public ResponseEntity<ApiResponse<Void>> remove(@PathVariable UUID id) {
 		managerService.remove(id);
 		return ResponseEntity.ok(ApiResponse.success());
+	}
+
+	@GetMapping("/search")
+	public ResponseEntity<ManagerLoginDto> searchByEmail(@RequestParam String email) {
+		ManagerLoginDto managerLoginDto = managerService.findByEmail(email);
+		return ResponseEntity.ok(managerLoginDto);
 	}
 }
 
