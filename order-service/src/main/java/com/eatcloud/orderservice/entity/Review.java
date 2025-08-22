@@ -1,15 +1,17 @@
 package com.eatcloud.orderservice.entity;
 
-import com.eatcloud.orderservice.common.BaseTimeEntity;
+import com.eatcloud.autotime.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
 @Table(name = "p_reviews")
+@SQLRestriction("deleted_at is null")
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor

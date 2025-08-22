@@ -1,6 +1,6 @@
 package com.eatcloud.orderservice.entity;
 
-import com.eatcloud.orderservice.common.BaseTimeEntity;
+import com.eatcloud.autotime.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -8,8 +8,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import org.hibernate.annotations.SQLRestriction;
+
 @Entity
 @Table(name = "p_delivery_orders")
+@SQLRestriction("deleted_at is null")
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor

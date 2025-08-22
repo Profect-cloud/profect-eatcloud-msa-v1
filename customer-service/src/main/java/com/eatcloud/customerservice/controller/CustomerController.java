@@ -20,8 +20,8 @@ import com.eatcloud.customerservice.dto.request.ChangePasswordRequestDto;
 import com.eatcloud.customerservice.dto.request.CustomerProfileUpdateRequestDto;
 import com.eatcloud.customerservice.dto.request.CustomerWithdrawRequestDto;
 import com.eatcloud.customerservice.dto.response.CustomerProfileResponseDto;
-import com.eatcloud.customerservice.exception.CustomerErrorCode;
-import com.eatcloud.customerservice.exception.CustomerException;
+import com.eatcloud.customerservice.error.CustomerErrorCode;
+import com.eatcloud.autoresponse.error.BusinessException;
 import com.eatcloud.customerservice.message.ResponseMessage;
 import com.eatcloud.customerservice.service.CustomerService;
 
@@ -40,7 +40,7 @@ public class CustomerController {
 		try {
 			return UUID.fromString(jwt.getSubject());
 		} catch (IllegalArgumentException e) {
-			throw new CustomerException(CustomerErrorCode.INVALID_CUSTOMER_ID);
+			throw new BusinessException(CustomerErrorCode.INVALID_CUSTOMER_ID);
 		}
 	}
 
@@ -53,12 +53,12 @@ public class CustomerController {
 	})
 	@GetMapping("/profile")
 	@ResponseStatus(HttpStatus.OK)
-	public com.eatcloud.customerservice.common.ApiResponse<CustomerProfileResponseDto> getCustomer(
+	public com.eatcloud.autoresponse.core.ApiResponse<CustomerProfileResponseDto> getCustomer(
 		@AuthenticationPrincipal Jwt jwt) {
 
 		UUID customerId = getCustomerUuid(jwt);
 		CustomerProfileResponseDto response = customerService.getCustomerProfile(customerId);
-		return com.eatcloud.customerservice.common.ApiResponse.success(response);
+		return com.eatcloud.autoresponse.core.ApiResponse.success(response);
 	}
 
 	@Operation(summary = "2. 고객 프로필 수정", description = "인증된 고객의 프로필 정보를 수정합니다.")
@@ -71,13 +71,13 @@ public class CustomerController {
 	})
 	@PatchMapping("/profile")
 	@ResponseStatus(HttpStatus.OK)
-	public com.eatcloud.customerservice.common.ApiResponse<ResponseMessage> updateCustomer(
+	public com.eatcloud.autoresponse.core.ApiResponse<ResponseMessage> updateCustomer(
 		@AuthenticationPrincipal Jwt jwt,
 		@Valid @RequestBody CustomerProfileUpdateRequestDto request) {
 
 		UUID customerId = getCustomerUuid(jwt);
 		customerService.updateCustomer(customerId, request);
-		return com.eatcloud.customerservice.common.ApiResponse.success(ResponseMessage.PROFILE_UPDATE_SUCCESS);
+		return com.eatcloud.autoresponse.core.ApiResponse.success(ResponseMessage.PROFILE_UPDATE_SUCCESS);
 	}
 
 	@Operation(summary = "3. 고객 탈퇴", description = "인증된 고객이 서비스에서 탈퇴합니다.")
@@ -89,13 +89,13 @@ public class CustomerController {
 	})
 	@PostMapping("/withdraw")
 	@ResponseStatus(HttpStatus.OK)
-	public com.eatcloud.customerservice.common.ApiResponse<ResponseMessage> withdrawCustomer(
+	public com.eatcloud.autoresponse.core.ApiResponse<ResponseMessage> withdrawCustomer(
 		@AuthenticationPrincipal Jwt jwt,
 		@Valid @RequestBody CustomerWithdrawRequestDto request) {
 
 		UUID customerId = getCustomerUuid(jwt);
 		customerService.withdrawCustomer(customerId, request);
-		return com.eatcloud.customerservice.common.ApiResponse.success(ResponseMessage.CUSTOMER_WITHDRAW_SUCCESS);
+		return com.eatcloud.autoresponse.core.ApiResponse.success(ResponseMessage.CUSTOMER_WITHDRAW_SUCCESS);
 	}
 
 	@GetMapping("/search")

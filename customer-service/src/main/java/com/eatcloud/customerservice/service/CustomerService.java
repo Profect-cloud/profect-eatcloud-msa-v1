@@ -18,8 +18,8 @@ import com.eatcloud.customerservice.dto.request.CustomerProfileUpdateRequestDto;
 import com.eatcloud.customerservice.dto.request.CustomerWithdrawRequestDto;
 import com.eatcloud.customerservice.dto.response.CustomerProfileResponseDto;
 import com.eatcloud.customerservice.entity.Customer;
-import com.eatcloud.customerservice.exception.CustomerErrorCode;
-import com.eatcloud.customerservice.exception.CustomerException;
+import com.eatcloud.customerservice.error.CustomerErrorCode;
+import com.eatcloud.autoresponse.error.BusinessException;
 import com.eatcloud.customerservice.repository.CustomerRepository;
 
 @Service
@@ -44,7 +44,7 @@ public class CustomerService {
 	public Customer getCustomer(UUID customerId) {
 		Objects.requireNonNull(customerId, "Customer ID cannot be null");
 		return customerRepository.findById(customerId)
-			.orElseThrow(() -> new CustomerException(CustomerErrorCode.CUSTOMER_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(CustomerErrorCode.CUSTOMER_NOT_FOUND));
 	}
 
 	public CustomerProfileResponseDto getCustomerProfile(UUID customerId) {
@@ -58,7 +58,7 @@ public class CustomerService {
 		Objects.requireNonNull(request, "Update request cannot be null");
 
 		Customer customer = customerRepository.findById(customerId)
-			.orElseThrow(() -> new CustomerException(CustomerErrorCode.CUSTOMER_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(CustomerErrorCode.CUSTOMER_NOT_FOUND));
 
 		validateUpdateRequest(customer, request);
 		applyProfileUpdates(customer, request);
@@ -71,35 +71,35 @@ public class CustomerService {
 		Objects.requireNonNull(request, "Withdraw request cannot be null");
 
 		if (!StringUtils.hasText(request.reason())) {
-			throw new CustomerException(CustomerErrorCode.WITHDRAWAL_REASON_REQUIRED);
+			throw new BusinessException(CustomerErrorCode.WITHDRAWAL_REASON_REQUIRED);
 		}
 
 		Customer customer = customerRepository.findById(customerId)
-			.orElseThrow(() -> new CustomerException(CustomerErrorCode.CUSTOMER_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(CustomerErrorCode.CUSTOMER_NOT_FOUND));
 
-		customerRepository.deleteById(customerId);
+		customerRepository.softDeleteById(customerId, "customer");
 	}
 
 	private void validateUpdateRequest(Customer customer, CustomerProfileUpdateRequestDto request) {
 		if (request.getEmail() != null) {
-			if (!EMAIL_PATTERN.matcher(request.getEmail()).matches()) {
-				throw new CustomerException(CustomerErrorCode.INVALID_EMAIL_FORMAT);
-			}
-			if (!request.getEmail().equals(customer.getEmail()) &&
-				customerRepository.existsByEmailAndTimeData_DeletedAtIsNull(request.getEmail())) {
-				throw new CustomerException(CustomerErrorCode.EMAIL_ALREADY_EXISTS);
-			}
+					if (!EMAIL_PATTERN.matcher(request.getEmail()).matches()) {
+			throw new BusinessException(CustomerErrorCode.INVALID_EMAIL_FORMAT);
+		}
+		if (!request.getEmail().equals(customer.getEmail()) &&
+			customerRepository.existsByEmailAndDeletedAtIsNull(request.getEmail())) {
+			throw new BusinessException(CustomerErrorCode.EMAIL_ALREADY_EXISTS);
+		}
 		}
 
 		if (request.getNickname() != null &&
 			!request.getNickname().equals(customer.getNickname()) &&
-			customerRepository.existsByNicknameAndTimeData_DeletedAtIsNull(request.getNickname())) {
-			throw new CustomerException(CustomerErrorCode.NICKNAME_ALREADY_EXISTS);
+			customerRepository.existsByNicknameAndDeletedAtIsNull(request.getNickname())) {
+			throw new BusinessException(CustomerErrorCode.NICKNAME_ALREADY_EXISTS);
 		}
 
 		if (request.getPhoneNumber() != null &&
 			!PHONE_PATTERN.matcher(request.getPhoneNumber()).matches()) {
-			throw new CustomerException(CustomerErrorCode.INVALID_PHONE_FORMAT);
+			throw new BusinessException(CustomerErrorCode.INVALID_PHONE_FORMAT);
 		}
 	}
 

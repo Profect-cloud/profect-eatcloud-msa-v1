@@ -4,6 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.hibernate.annotations.SQLRestriction;
+
+import com.eatcloud.autotime.BaseTimeEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -17,9 +21,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import com.eatcloud.customerservice.global.timeData.BaseTimeEntity;
 
 @Entity
+@SQLRestriction("deleted_at is null")
 @Table(name = "p_customer")
 @Getter
 @Setter

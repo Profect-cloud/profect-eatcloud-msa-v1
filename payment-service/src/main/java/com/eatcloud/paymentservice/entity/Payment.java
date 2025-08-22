@@ -3,19 +3,23 @@ package com.eatcloud.paymentservice.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
 
+import com.eatcloud.autotime.BaseTimeEntity;
+
 @Entity
 @Table(name = "p_payments")
+@SQLRestriction("deleted_at is null")
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Payment {
+public class Payment extends BaseTimeEntity {
     
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

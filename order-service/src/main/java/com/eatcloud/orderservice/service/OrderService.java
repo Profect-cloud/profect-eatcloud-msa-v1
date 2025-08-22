@@ -289,7 +289,7 @@ public class OrderService {
     }
 
     public Order findOrderByCustomerAndOrderId(UUID customerId, UUID orderId) {
-        return orderRepository.findByOrderIdAndCustomerIdAndTimeData_DeletedAtIsNull(orderId, customerId)
+        		return orderRepository.findByOrderIdAndCustomerIdAndDeletedAtIsNull(orderId, customerId)
                 .orElseThrow(() -> new RuntimeException("해당 주문이 없습니다."));
     }
 
