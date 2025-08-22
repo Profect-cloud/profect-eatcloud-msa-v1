@@ -12,7 +12,9 @@ CREATE TABLE IF NOT EXISTS p_stores (
   store_name     VARCHAR(200) NOT NULL,
   store_address  VARCHAR(300),
   phone_number   VARCHAR(18),
-  category_id    INT NOT NULL, -- logical ref -> admin.p_store_categories.id (top-level)
+  store_category_id    INT NOT NULL, -- logical ref -> admin.p_store_categories.id (top-level)
+  application_id UUID UNIQUE,
+  manager_id     UUID,
   min_cost       INTEGER NOT NULL DEFAULT 0,
   description    TEXT,
   store_lat      DOUBLE PRECISION,
