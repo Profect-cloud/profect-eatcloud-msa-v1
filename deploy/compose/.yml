@@ -178,7 +178,7 @@ services:
       - "${DB_PORT:-5432}:5432"
     environment:
       POSTGRES_DB: ${DB_NAME:-eatcloud_db}
-      POSTGRES_USER: ${DB_USERNAME:-eatcloud_user}
+      POSTGRES_USER: ${DB_USERNAMENAME:-eatcloud_user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-devpassword123}
     volumes:
       - eatcloud_db_data:/var/lib/postgresql/data
@@ -187,7 +187,7 @@ services:
       - eatcloud-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-eatcloud_user} -d ${DB_NAME:-eatcloud_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-eatcloud_user} -d ${DB_NAME:-eatcloud_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -211,7 +211,7 @@ services:
       DB_HOST: eatcloud-db
       DB_PORT: 5432
       DB_NAME: auth_db
-      DB_USER: ${DB_USERNAME:-eatcloud_user}
+      DB_USERNAME: ${DB_USERNAME:-eatcloud_user}
       DB_PASSWORD: ${DB_PASSWORD:-devpassword123}
       REDIS_HOST: redis
       EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka
@@ -235,7 +235,7 @@ services:
       DB_HOST: eatcloud-db
       DB_PORT: 5432
       DB_NAME: customer_db
-      DB_USER: ${DB_USERNAME:-eatcloud_user}
+      DB_USERNAME: ${DB_USERNAME:-eatcloud_user}
       DB_PASSWORD: ${DB_PASSWORD:-devpassword123}
       REDIS_HOST: redis
       EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka
@@ -258,7 +258,7 @@ services:
       DB_HOST: eatcloud-db
       DB_PORT: 5432
       DB_NAME: admin_db
-      DB_USER: ${DB_USERNAME:-eatcloud_user}
+      DB_USERNAME: ${DB_USERNAME:-eatcloud_user}
       DB_PASSWORD: ${DB_PASSWORD:-devpassword123}
       REDIS_HOST: redis
       EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka
@@ -281,7 +281,7 @@ services:
       DB_HOST: eatcloud-db
       DB_PORT: 5432
       DB_NAME: manager_db
-      DB_USER: ${DB_USERNAME:-eatcloud_user}
+      DB_USERNAME: ${DB_USERNAME:-eatcloud_user}
       DB_PASSWORD: ${DB_PASSWORD:-devpassword123}
       REDIS_HOST: redis
       EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka
@@ -304,7 +304,7 @@ services:
       DB_HOST: eatcloud-db
       DB_PORT: 5432
       DB_NAME: store_db
-      DB_USER: ${DB_USERNAME:-eatcloud_user}
+      DB_USERNAME: ${DB_USERNAME:-eatcloud_user}
       DB_PASSWORD: ${DB_PASSWORD:-devpassword123}
       REDIS_HOST: redis
       EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka
@@ -327,7 +327,7 @@ services:
       DB_HOST: eatcloud-db
       DB_PORT: 5432
       DB_NAME: order_db
-      DB_USER: ${DB_USERNAME:-eatcloud_user}
+      DB_USERNAME: ${DB_USERNAME:-eatcloud_user}
       DB_PASSWORD: ${DB_PASSWORD:-devpassword123}
       REDIS_HOST: redis
       EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka
@@ -353,7 +353,7 @@ services:
       DB_HOST: eatcloud-db
       DB_PORT: 5432
       DB_NAME: payment_db
-      DB_USER: ${DB_USERNAME:-eatcloud_user}
+      DB_USERNAME: ${DB_USERNAME:-eatcloud_user}
       DB_PASSWORD: ${DB_PASSWORD:-devpassword123}
       REDIS_HOST: redis
       EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka
