@@ -8,6 +8,7 @@ import lombok.*;
 import org.hibernate.annotations.SQLRestriction;
 import org.locationtech.jts.geom.Point;
 
+import java.math.BigDecimal;
 import java.time.LocalTime;
 import java.util.UUID;
 
@@ -69,5 +70,18 @@ public class Store extends BaseTimeEntity {
 
     @Column(name = "store_category_id", nullable = false)
     private Integer storeCategoryId;
+
+    // ⭐ 평점 집계 (스키마: rating_sum NUMERIC(10,2), rating_count INT, avg_rating NUMERIC(3,2))
+    @Column(name = "rating_sum", nullable = false, precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal ratingSum = BigDecimal.ZERO;
+
+    @Column(name = "rating_count", nullable = false)
+    @Builder.Default
+    private Integer ratingCount = 0;
+
+    @Column(name = "avg_rating", nullable = false, precision = 3, scale = 2)
+    @Builder.Default
+    private BigDecimal avgRating = BigDecimal.ZERO;
 
 }
