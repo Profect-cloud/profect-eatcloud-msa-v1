@@ -1,5 +1,7 @@
 package com.eatcloud.orderservice.service;
 
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.eatcloud.orderservice.dto.CartItem;
@@ -17,7 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -28,14 +33,26 @@ public class CartService {
     private final CartRepository cartRepository;
 
     private static final String CART_KEY_PREFIX = "cart:";
-    private static final Duration CART_TTL = Duration.ofHours(24);
+    private static final Duration CART_TTL = Duration.ofHours(1);
+
+    private final Map<UUID, List<CartItem>> pendingChanges = new ConcurrentHashMap<>();
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private static final int BATCH_INTERVAL_SECONDS = 10;
+
 
     public void addItem(UUID customerId, AddCartItemRequest request) {
         validateCustomerId(customerId);
         validateAddItemRequest(request);
 
         try {
-            List<CartItem> cartItems = getCart(customerId);
+            // 🛠️ 수정: getCart 대신 Redis에서 직접 조회
+            List<CartItem> cartItems = getCartFromRedis(customerId);
+
+            // Cache Miss 시 빈 리스트로 시작
+            if (cartItems.isEmpty()) {
+                cartItems = new ArrayList<>();
+            }
+
             validateStoreConsistency(cartItems, request.getStoreId());
 
             Optional<CartItem> existingItem = cartItems.stream()
@@ -87,10 +104,12 @@ public class CartService {
                 return cartItems;
             }
 
+            // Cache Miss 시 DB에서 조회
             log.debug("Cache miss, retrieving from database for customer: {}", customerId);
             cartItems = getCartFromDatabase(customerId);
 
             if (!cartItems.isEmpty()) {
+                // ��️ 수정: Redis에만 저장 (기존 메서드 사용)
                 saveCartToRedis(customerId, cartItems);
             }
 
@@ -107,7 +126,15 @@ public class CartService {
         validateUpdateItemRequest(request);
 
         try {
-            List<CartItem> cartItems = getCart(customerId);
+            List<CartItem> cartItems = getCartFromRedis(customerId);
+
+            // Cache Miss 시 DB에서 조회
+            if (cartItems.isEmpty()) {
+                cartItems = getCartFromDatabase(customerId);
+                if (!cartItems.isEmpty()) {
+                    saveCartToRedis(customerId, cartItems);
+                }
+            }
 
             CartItem targetItem = cartItems.stream()
                 .filter(item -> item.getMenuId().equals(request.getMenuId()))
@@ -175,7 +202,7 @@ public class CartService {
 
         try {
             invalidateCartCache(customerId);
-            clearCartFromDatabase(customerId);
+            syncToDatabaseAsync(customerId, new ArrayList<>());
 
             log.info("Successfully cleared cart for customer: {}", customerId);
 
@@ -191,7 +218,7 @@ public class CartService {
 
         try {
             invalidateCartCache(customerId);
-            clearCartFromDatabase(customerId);
+            syncToDatabaseAsync(customerId, new ArrayList<>());
             log.info("Cart invalidated after order completion for customer: {}", customerId);
         } catch (Exception e) {
             log.error("Failed to invalidate cart after order for customer: {}", customerId, e);
@@ -316,13 +343,12 @@ public class CartService {
 
     private void syncToDatabaseAsync(UUID customerId, List<CartItem> cartItems) {
         try {
-            CompletableFuture.runAsync(() -> syncToDatabase(customerId, cartItems))
-                .exceptionally(throwable -> {
-                    log.error("Async database sync failed for customer: {}", customerId, throwable);
-                    return null;
-                });
+            pendingChanges.put(customerId, cartItems);
+            log.debug("Added to batch queue for customer: {}, queue size: {}",
+                customerId, pendingChanges.size());
+
         } catch (Exception e) {
-            log.warn("Failed to start async DB sync for customer: {}, falling back to sync",
+            log.warn("Failed to add to batch queue for customer: {}, falling back to immediate sync",
                 customerId, e);
             syncToDatabase(customerId, cartItems);
         }
@@ -343,16 +369,6 @@ public class CartService {
 
         } catch (Exception e) {
             log.error("Failed to sync cart to database for customer: {}", customerId, e);
-            throw new CartException(ErrorCode.CART_NOT_FOUND);
-        }
-    }
-
-    private void clearCartFromDatabase(UUID customerId) {
-        try {
-            cartRepository.deleteByCustomerId(customerId);
-            log.debug("Cleared cart from database for customer: {}", customerId);
-        } catch (Exception e) {
-            log.error("Failed to clear cart from database for customer: {}", customerId, e);
             throw new CartException(ErrorCode.CART_NOT_FOUND);
         }
     }
@@ -425,6 +441,92 @@ public class CartService {
             UUID existingStoreId = cartItems.getFirst().getStoreId();
             if (!existingStoreId.equals(newStoreId)) {
                 throw new CartException(ErrorCode.CART_STORE_MISMATCH);
+            }
+        }
+    }
+
+    @PostConstruct
+    public void initBatchProcessor() {
+        scheduler.scheduleAtFixedRate(
+            this::processBatchChanges,
+            BATCH_INTERVAL_SECONDS,
+            BATCH_INTERVAL_SECONDS,
+            TimeUnit.SECONDS
+        );
+
+        log.info("Cart batch processor started with {} seconds interval", BATCH_INTERVAL_SECONDS);
+    }
+
+    @PreDestroy
+    public void cleanup() {
+        if (scheduler != null && !scheduler.isShutdown()) {
+            scheduler.shutdown();
+            try {
+                if (!scheduler.awaitTermination(10, TimeUnit.SECONDS)) {
+                    scheduler.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                scheduler.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    private void processBatchChanges() {
+        if (pendingChanges.isEmpty()) return;
+
+        Map<UUID, List<CartItem>> batch = null;
+
+        try {
+            batch = new HashMap<>(pendingChanges);
+            pendingChanges.clear();
+
+            log.info("Processing batch DB sync for {} customers", batch.size());
+
+            batch.forEach((customerId, cartItems) -> {
+                try {
+                    syncToDatabase(customerId, cartItems);
+                    log.debug("Batch DB sync completed for customer: {}", customerId);
+
+                } catch (Exception e) {
+                    log.error("Batch DB sync failed for customer: {}", customerId, e);
+                    pendingChanges.put(customerId, cartItems);
+                    log.warn("Re-added failed sync to batch queue for customer: {}", customerId);
+                }
+            });
+
+            log.info("Batch DB sync completed for {} customers", batch.size());
+
+        } catch (Exception e) {
+            log.error("Failed to process batch changes", e);
+            if (batch != null) {
+                pendingChanges.putAll(batch);
+                log.warn("Re-added all failed batch items to queue due to processing error");
+            }
+        }
+    }
+
+    public Map<String, Object> getBatchQueueStatus() {
+        Map<String, Object> status = new HashMap<>();
+
+        int pendingCount = pendingChanges.size();
+        List<UUID> pendingIds = new ArrayList<>(pendingChanges.keySet());
+
+        status.put("pendingChangesCount", pendingCount);
+        status.put("batchIntervalSeconds", BATCH_INTERVAL_SECONDS);
+        status.put("pendingCustomerIds", pendingIds);
+        status.put("lastProcessedTime", System.currentTimeMillis());
+
+        return status;
+    }
+
+    public void forceBatchProcessing() {
+        log.info("Force batch processing triggered");
+        synchronized (this) {
+            if (!pendingChanges.isEmpty()) {
+                processBatchChanges();
+            } else {
+                log.info("No pending changes to process");
             }
         }
     }
