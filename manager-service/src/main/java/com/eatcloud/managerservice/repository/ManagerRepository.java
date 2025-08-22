@@ -8,7 +8,7 @@ import com.eatcloud.managerservice.entity.Manager;
 
 public interface ManagerRepository extends SoftDeleteRepository<Manager, UUID> {
 
-	Optional<Manager> findByEmailAndDeletedAtIsNull(String email);
+	Optional<Manager> findByEmail(String email);
 
 	Optional<Manager> findByIdAndDeletedAtIsNull(UUID id);
 }

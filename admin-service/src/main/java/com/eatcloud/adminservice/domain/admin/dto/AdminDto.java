@@ -16,4 +16,5 @@ public class AdminDto {
 	private String password;
 	private String phoneNumber;
 	private String position;
+	private String role;
 }
