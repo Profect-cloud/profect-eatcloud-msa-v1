@@ -1,6 +1,3 @@
--- admin/schema.sql
-CREATE SCHEMA IF NOT EXISTS admin;
-SET search_path TO admin;
 
 -- Extensions used in this schema
 CREATE EXTENSION IF NOT EXISTS pgcrypto;

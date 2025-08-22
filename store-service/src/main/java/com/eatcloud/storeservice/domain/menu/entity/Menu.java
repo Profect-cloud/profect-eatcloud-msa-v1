@@ -34,9 +34,6 @@ public class Menu extends BaseTimeEntity {
     @Column(name = "menu_name", nullable = false, length = 200)
     private String menuName;
 
-//    @Column(name = "menu_category_id", nullable = false)
-//    private Integer menuCategoryId;
-
     @Column(name = "menu_category_code", nullable = false, length = 100)
     private String menuCategoryCode;
 
@@ -52,5 +49,15 @@ public class Menu extends BaseTimeEntity {
 
     @Column(name = "image_url", length = 500)
     private String imageUrl;
+
+    // ⭐ 재고 관리(스키마 반영)
+    @Column(name = "is_unlimited", nullable = false)
+    @Builder.Default
+    private Boolean isUnlimited = false;
+
+    @Column(name = "stock_quantity", nullable = false)
+    @Builder.Default
+    private Integer stockQuantity = 0;
+
 
 }
