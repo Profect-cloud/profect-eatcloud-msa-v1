@@ -1,6 +1,7 @@
 package com.eatcloud.orderservice.controller;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -80,5 +81,17 @@ public class CartController {
 		UUID customerId = UUID.fromString(jwt.getSubject());
 		cartService.clearCart(customerId);
 		return ApiResponse.success("장바구니가 비워졌습니다.");
+	}
+
+	@GetMapping("/batch-status")
+	public ApiResponse<Map<String, Object>> getBatchStatus() {
+		Map<String, Object> status = cartService.getBatchQueueStatus();
+		return ApiResponse.success(status);
+	}
+
+	@PostMapping("/force-batch")
+	public ApiResponse<String> forceBatchProcessing() {
+		cartService.forceBatchProcessing();
+		return ApiResponse.success("Batch processing triggered");
 	}
 }
