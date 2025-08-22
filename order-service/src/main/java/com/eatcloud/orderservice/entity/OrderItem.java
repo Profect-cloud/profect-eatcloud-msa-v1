@@ -5,8 +5,11 @@ import lombok.*;
 
 import java.util.UUID;
 
+import org.hibernate.annotations.SQLRestriction;
+
 @Entity
 @Table(name = "order_items")
+@SQLRestriction("deleted_at is null")
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor

@@ -12,10 +12,10 @@ import com.eatcloud.autotime.repository.SoftDeleteRepository;
 import com.eatcloud.customerservice.entity.Address;
 
 public interface AddressRepository extends SoftDeleteRepository<Address, UUID> {
-	List<Address> findByCustomerIdAndTimeData_DeletedAtIsNull(UUID customerId);
+	List<Address> findByCustomerIdAndDeletedAtIsNull(UUID customerId);
 
-	Optional<Address> findByCustomerIdAndIsSelectedTrueAndTimeData_DeletedAtIsNull(UUID customerId);
+	Optional<Address> findByCustomerIdAndIsSelectedTrueAndDeletedAtIsNull(UUID customerId);
 
-	@Query("SELECT a FROM Address a WHERE a.id = :id AND a.customer.id = :customerId AND a.timeData.deletedAt IS NULL")
+	@Query("SELECT a FROM Address a WHERE a.id = :id AND a.customer.id = :customerId AND a.deletedAt IS NULL")
 	Optional<Address> findByIdAndCustomerId(@Param("id") UUID id, @Param("customerId") UUID customerId);
 }

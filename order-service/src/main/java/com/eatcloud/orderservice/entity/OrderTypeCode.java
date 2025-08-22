@@ -1,11 +1,14 @@
 package com.eatcloud.orderservice.entity;
 
+import org.hibernate.annotations.SQLRestriction;
+
 import jakarta.persistence.*;
 import lombok.*;
-import com.eatcloud.orderservice.common.BaseTimeEntity;
+import com.eatcloud.autotime.BaseTimeEntity;
 
 @Entity
 @Table(name = "order_type_codes")
+@SQLRestriction("deleted_at is null")
 @Getter
 @Setter
 @NoArgsConstructor

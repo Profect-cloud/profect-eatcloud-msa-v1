@@ -86,14 +86,14 @@ public class CustomerService {
 			throw new BusinessException(CustomerErrorCode.INVALID_EMAIL_FORMAT);
 		}
 		if (!request.getEmail().equals(customer.getEmail()) &&
-			customerRepository.existsByEmailAndTimeData_DeletedAtIsNull(request.getEmail())) {
+			customerRepository.existsByEmailAndDeletedAtIsNull(request.getEmail())) {
 			throw new BusinessException(CustomerErrorCode.EMAIL_ALREADY_EXISTS);
 		}
 		}
 
 		if (request.getNickname() != null &&
 			!request.getNickname().equals(customer.getNickname()) &&
-			customerRepository.existsByNicknameAndTimeData_DeletedAtIsNull(request.getNickname())) {
+			customerRepository.existsByNicknameAndDeletedAtIsNull(request.getNickname())) {
 			throw new BusinessException(CustomerErrorCode.NICKNAME_ALREADY_EXISTS);
 		}
 

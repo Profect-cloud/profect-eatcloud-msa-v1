@@ -49,7 +49,7 @@ public class ReviewService {
 
 	public List<ReviewResponseDto> getReviewsByCustomer(UUID customerId) {
 		List<Review> reviews = reviewRepository
-			.findByOrderCustomerIdAndTimeData_DeletedAtIsNullOrderByTimeData_CreatedAtDesc(customerId);
+			.findByOrderCustomerIdAndDeletedAtIsNullOrderByCreatedAtDesc(customerId);
 
 		return reviews.stream()
 			.map(this::toResponse)
@@ -58,7 +58,7 @@ public class ReviewService {
 
 	public List<ReviewResponseDto> getReviewsByStore(UUID storeId) {
 		List<Review> reviews = reviewRepository
-			.findByOrderStoreIdAndTimeData_DeletedAtIsNullOrderByTimeData_CreatedAtDesc(storeId);
+			.findByOrderStoreIdAndDeletedAtIsNullOrderByCreatedAtDesc(storeId);
 
 		return reviews.stream()
 			.map(this::toResponse)
@@ -67,7 +67,7 @@ public class ReviewService {
 
 	public List<ReviewResponseDto> getReviewsByStoreAndRating(UUID storeId, BigDecimal rating) {
 		List<Review> reviews = reviewRepository
-			.findByOrderStoreIdAndRatingAndTimeData_DeletedAtIsNullOrderByTimeData_CreatedAtDesc(storeId, rating);
+			.findByOrderStoreIdAndRatingAndDeletedAtIsNullOrderByCreatedAtDesc(storeId, rating);
 
 		return reviews.stream()
 			.map(this::toResponse)
@@ -80,7 +80,7 @@ public class ReviewService {
 		validateReviewRequest(request);
 		
 		// 리뷰 조회 및 권한 확인
-		Review review = reviewRepository.findByReviewIdAndOrderCustomerIdAndTimeData_DeletedAtIsNull(reviewId, customerId)
+		Review review = reviewRepository.findByReviewIdAndOrderCustomerIdAndDeletedAtIsNull(reviewId, customerId)
 			.orElseThrow(() -> new RuntimeException("해당 리뷰가 없거나 수정 권한이 없습니다."));
 
 		// 리뷰 수정 (Setter가 없으므로 새로 빌드)
@@ -97,7 +97,7 @@ public class ReviewService {
 
 	@Transactional
 	public void deleteReview(UUID customerId, UUID reviewId) {
-		Review review = reviewRepository.findByReviewIdAndOrderCustomerIdAndTimeData_DeletedAtIsNull(reviewId, customerId)
+		Review review = reviewRepository.findByReviewIdAndOrderCustomerIdAndDeletedAtIsNull(reviewId, customerId)
 			.orElseThrow(() -> new RuntimeException("해당 리뷰가 없거나 삭제 권한이 없습니다."));
 		
 		reviewRepository.delete(review);
@@ -105,7 +105,7 @@ public class ReviewService {
 
 	public BigDecimal calculateAverageRating(UUID storeId) {
 		List<Review> reviews = reviewRepository
-			.findByOrderStoreIdAndTimeData_DeletedAtIsNullOrderByTimeData_CreatedAtDesc(storeId);
+			.findByOrderStoreIdAndDeletedAtIsNullOrderByCreatedAtDesc(storeId);
 
 		if (reviews.isEmpty()) {
 			return BigDecimal.ZERO;
@@ -120,7 +120,7 @@ public class ReviewService {
 
 	public Map<String, Object> getReviewStatistics(UUID storeId) {
 		List<Review> reviews = reviewRepository
-			.findByOrderStoreIdAndTimeData_DeletedAtIsNullOrderByTimeData_CreatedAtDesc(storeId);
+			.findByOrderStoreIdAndDeletedAtIsNullOrderByCreatedAtDesc(storeId);
 
 		Map<String, Object> statistics = new HashMap<>();
 		
@@ -176,10 +176,10 @@ public class ReviewService {
 	}
 
 	private Order validateAndGetOrder(UUID customerId, UUID orderId) {
-		Order order = orderRepository.findByOrderIdAndCustomerIdAndTimeData_DeletedAtIsNull(orderId, customerId)
+		Order order = orderRepository.findByOrderIdAndCustomerIdAndDeletedAtIsNull(orderId, customerId)
 			.orElseThrow(() -> new RuntimeException("해당 주문이 없거나 권한이 없습니다."));
 
-		if (reviewRepository.existsByOrderOrderIdAndTimeData_DeletedAtIsNull(orderId)) {
+		if (reviewRepository.existsByOrderOrderIdAndDeletedAtIsNull(orderId)) {
 			throw new RuntimeException("이미 해당 주문에 대한 리뷰가 존재합니다.");
 		}
 
@@ -192,7 +192,7 @@ public class ReviewService {
 			review.getOrder().getOrderId(),
 			review.getRating(),
 			review.getContent(),
-			review.getTimeData().getCreatedAt()
+									review.getCreatedAt()
 		);
 	}
 }

@@ -74,7 +74,7 @@ public class OrderController {
 				response.put("orderMenuList", foundOrder.getOrderMenuList());
 				response.put("orderStatus", foundOrder.getOrderStatusCode().getCode());
 				response.put("orderType", foundOrder.getOrderTypeCode().getCode());
-				response.put("createdAt", foundOrder.getTimeData().getCreatedAt());
+				response.put("createdAt", foundOrder.getCreatedAt());
 				response.put("message", "주문 조회 성공");
 
 				return ResponseEntity.ok(response);
@@ -106,7 +106,7 @@ public class OrderController {
 				response.put("orderMenuList", foundOrder.getOrderMenuList());
 				response.put("orderStatus", foundOrder.getOrderStatusCode().getCode());
 				response.put("orderType", foundOrder.getOrderTypeCode().getCode());
-				response.put("createdAt", foundOrder.getTimeData().getCreatedAt());
+				response.put("createdAt", foundOrder.getCreatedAt());
 				response.put("message", "주문 조회 성공");
 
 				return ResponseEntity.ok(response);

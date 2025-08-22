@@ -3,14 +3,16 @@ package com.eatcloud.orderservice.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import com.eatcloud.orderservice.dto.CartItem;
-import com.eatcloud.orderservice.common.BaseTimeEntity;
+import com.eatcloud.autotime.BaseTimeEntity;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.type.SqlTypes;
 import java.util.UUID;
 import java.util.List;
 
 @Entity
 @Table(name = "p_cart")
+@SQLRestriction("deleted_at is null")
 @Getter
 @Setter
 @NoArgsConstructor

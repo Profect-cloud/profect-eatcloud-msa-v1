@@ -6,14 +6,14 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.eatcloud.orderservice.entity.Cart;
-import com.eatcloud.orderservice.common.BaseTimeRepository;
+import com.eatcloud.autotime.repository.SoftDeleteRepository;
 
 import java.util.Optional;
 import java.util.UUID;
 
 
 @Repository
-public interface CartRepository extends BaseTimeRepository<Cart, UUID> {
+public interface CartRepository extends SoftDeleteRepository<Cart, UUID> {
     Optional<Cart> findByCustomerId(UUID customerId);
     void deleteByCustomerId(UUID customerId);
 

@@ -9,7 +9,6 @@ import com.eatcloud.customerservice.error.CustomerErrorCode;
 import com.eatcloud.autoresponse.error.BusinessException;
 import com.eatcloud.customerservice.repository.AddressRepository;
 import com.eatcloud.customerservice.repository.CustomerRepository;
-import com.eatcloud.customerservice.SecurityUtil;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +28,7 @@ public class AddressService {
 	public List<AddressResponseDto> getAddressList(UUID customerId) {
 		customerRepository.findById(customerId)
 			.orElseThrow(() -> new BusinessException(CustomerErrorCode.CUSTOMER_NOT_FOUND));
-		List<Address> addresses = addressRepository.findByCustomerIdAndTimeData_DeletedAtIsNull(customerId);
+		List<Address> addresses = addressRepository.findByCustomerIdAndDeletedAtIsNull(customerId);
 		return addresses.stream()
 			.map(this::toResponse)
 			.collect(Collectors.toList());
@@ -39,7 +38,7 @@ public class AddressService {
 	public AddressResponseDto createAddress(UUID customerId, AddressRequestDto request) {
 		Customer customer = customerRepository.findById(customerId)
 			.orElseThrow(() -> new BusinessException(CustomerErrorCode.CUSTOMER_NOT_FOUND));
-		List<Address> existingAddresses = addressRepository.findByCustomerIdAndTimeData_DeletedAtIsNull(customerId);
+		List<Address> existingAddresses = addressRepository.findByCustomerIdAndDeletedAtIsNull(customerId);
 		boolean isFirstAddress = existingAddresses.isEmpty();
 
 		Address address = Address.builder()
@@ -84,7 +83,7 @@ public class AddressService {
 			return;
 		}
 
-		addressRepository.findByCustomerIdAndIsSelectedTrueAndTimeData_DeletedAtIsNull(customerId)
+		addressRepository.findByCustomerIdAndIsSelectedTrueAndDeletedAtIsNull(customerId)
 			.ifPresent(currentDefault -> {
 				currentDefault.changeSelected(false);
 				addressRepository.save(currentDefault);
