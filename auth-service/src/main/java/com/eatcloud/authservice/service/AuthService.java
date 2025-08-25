@@ -116,6 +116,7 @@ public class AuthService {
 			.name(req.getName())
 			.nickname(req.getNickname())
 			.phone(req.getPhone())
+			.points(req.getPoints()) // 포인트 추가
 			.build();
 
 		SignupRedisData data = new SignupRedisData(encodedReq, verificationCode);
@@ -148,6 +149,7 @@ public class AuthService {
 			.name(req.getName())
 			.nickname(req.getNickname())
 			.phone(req.getPhone())
+			.points(req.getPoints()) // 포인트 추가
 			.build();
 
 		// Gateway에 회원가입 요청

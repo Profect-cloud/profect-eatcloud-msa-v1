@@ -75,4 +75,41 @@ public class ExternalApiService {
             throw new RuntimeException("Store service is temporarily unavailable for menu: " + menuId, e);
         }
     }
+
+    /**
+     * 사용자 포인트 조회
+     */
+    public Integer getCustomerPoints(UUID customerId, String bearerToken) {
+        try {
+            String url = "http://customer-service/api/v1/customers/" + customerId + "/points";
+
+            // Authorization 헤더 설정
+            HttpHeaders headers = new HttpHeaders();
+            if (bearerToken != null && !bearerToken.trim().isEmpty()) {
+                headers.setBearerAuth(bearerToken);
+            }
+            
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<Integer> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    Integer.class
+            );
+
+            Integer points = response.getBody();
+            log.info("Customer points retrieved successfully for customerId: {}, points: {}", customerId, points);
+
+            if (points == null) {
+                throw new RuntimeException("Customer points is null for customerId: " + customerId);
+            }
+
+            return points;
+
+        } catch (RestClientException e) {
+            log.error("Failed to get customer points for customerId: {}", customerId, e);
+            throw new RuntimeException("Customer service is temporarily unavailable for customer: " + customerId, e);
+        }
+    }
 }

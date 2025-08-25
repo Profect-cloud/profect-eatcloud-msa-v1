@@ -98,14 +98,32 @@ public class CustomerController {
 		return com.eatcloud.autoresponse.core.ApiResponse.success(ResponseMessage.CUSTOMER_WITHDRAW_SUCCESS);
 	}
 
+	@Operation(summary = "4. 고객 포인트 조회", description = "고객의 현재 포인트를 조회합니다.")
+	@ApiResponses({
+		@ApiResponse(responseCode = "200", description = "조회 성공"),
+		@ApiResponse(responseCode = "404", description = "고객을 찾을 수 없음")
+	})
+	@GetMapping("/{customerId}/points")
+	@ResponseStatus(HttpStatus.OK)
+	public ResponseEntity<Integer> getCustomerPoints(@PathVariable UUID customerId) {
+		Integer points = customerService.getCustomerPoints(customerId);
+		return ResponseEntity.ok(points);
+	}
+
 	@GetMapping("/search")
 	public ResponseEntity<UserDto> searchByEmail(@RequestParam String email) {
 		UserDto userDto = customerService.findByEmail(email);
 		return ResponseEntity.ok(userDto);
 	}
 
+	@Operation(summary = "5. 고객 회원가입", description = "새로운 고객을 등록합니다. 포인트는 선택사항이며, 입력하지 않으면 기본값 0으로 설정됩니다.")
+	@ApiResponses({
+		@ApiResponse(responseCode = "200", description = "회원가입 성공"),
+		@ApiResponse(responseCode = "400", description = "잘못된 요청 데이터"),
+		@ApiResponse(responseCode = "409", description = "이메일 또는 닉네임 중복")
+	})
 	@PostMapping("/signup")
-	public ResponseEntity<Void> signup(@RequestBody SignupRequestDto request) {
+	public ResponseEntity<Void> signup(@Valid @RequestBody SignupRequestDto request) {
 		customerService.signup(request);
 		return ResponseEntity.ok().build();
 	}
@@ -117,5 +135,19 @@ public class CustomerController {
 		UUID customerId = getCustomerUuid(jwt);
 		customerService.changePassword(customerId, request);
 		return ResponseEntity.ok("비밀번호가 변경되었습니다.");
+	}
+
+	@Operation(summary = "고객 ID로 조회", description = "고객 ID로 고객 정보를 조회합니다.")
+	@ApiResponses({
+		@ApiResponse(responseCode = "200", description = "조회 성공"),
+		@ApiResponse(responseCode = "404", description = "고객을 찾을 수 없음")
+	})
+	@GetMapping("/{customerId}")
+	@ResponseStatus(HttpStatus.OK)
+	public com.eatcloud.autoresponse.core.ApiResponse<CustomerProfileResponseDto> getCustomerById(
+		@PathVariable UUID customerId) {
+
+		CustomerProfileResponseDto response = customerService.getCustomerProfile(customerId);
+		return com.eatcloud.autoresponse.core.ApiResponse.success(response);
 	}
 }

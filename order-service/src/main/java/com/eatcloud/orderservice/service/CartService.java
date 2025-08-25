@@ -16,6 +16,10 @@ import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import java.time.Duration;
 import java.util.*;
@@ -31,6 +35,7 @@ public class CartService {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final CartRepository cartRepository;
+    private final PlatformTransactionManager transactionManager;
 
     private static final String CART_KEY_PREFIX = "cart:";
     private static final Duration CART_TTL = Duration.ofHours(1);
@@ -373,6 +378,27 @@ public class CartService {
         }
     }
 
+    /**
+     * 트랜잭션 없이 데이터베이스 동기화 (스케줄러에서 사용)
+     */
+    protected void syncToDatabaseWithTransaction(UUID customerId, List<CartItem> cartItems) {
+        try {
+            if (cartItems.isEmpty()) {
+                cartRepository.deleteByCustomerId(customerId);
+                log.debug("Deleted empty cart from database for customer: {}", customerId);
+            } else {
+                Cart cart = convertCartItemsToEntity(customerId, cartItems);
+                cartRepository.save(cart);
+                log.debug("Synced cart to database for customer: {}, itemCount={}",
+                    customerId, cartItems.size());
+            }
+
+        } catch (Exception e) {
+            log.error("Failed to sync cart to database for customer: {}", customerId, e);
+            throw new CartException(ErrorCode.CART_NOT_FOUND);
+        }
+    }
+
     private CartItem convertMapToCartItem(Map<?, ?> map) {
         try {
             return CartItem.builder()
@@ -484,11 +510,24 @@ public class CartService {
             log.info("Processing batch DB sync for {} customers", batch.size());
 
             batch.forEach((customerId, cartItems) -> {
+                TransactionStatus transaction = null;
                 try {
-                    syncToDatabase(customerId, cartItems);
+                    // 수동으로 트랜잭션 시작
+                    DefaultTransactionDefinition def = new DefaultTransactionDefinition();
+                    def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+                    transaction = transactionManager.getTransaction(def);
+                    
+                    syncToDatabaseWithTransaction(customerId, cartItems);
+                    
+                    // 트랜잭션 커밋
+                    transactionManager.commit(transaction);
                     log.debug("Batch DB sync completed for customer: {}", customerId);
 
                 } catch (Exception e) {
+                    // 트랜잭션 롤백
+                    if (transaction != null) {
+                        transactionManager.rollback(transaction);
+                    }
                     log.error("Batch DB sync failed for customer: {}", customerId, e);
                     pendingChanges.put(customerId, cartItems);
                     log.warn("Re-added failed sync to batch queue for customer: {}", customerId);

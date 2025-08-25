@@ -15,4 +15,5 @@ public class SignupRequestDto {
     private String name;
     private String nickname;
     private String phone;
+    private Integer points; // 회원가입 시 포인트
 }

@@ -58,7 +58,7 @@ public class OrderService {
      * 레거시 메서드 - 단순 분산락만 사용하는 버전
      * (하위 호환성을 위해 유지)
      */
-    public CreateOrderResponse createOrderFromCartSimple(UUID customerId, CreateOrderRequest request) {
+    public CreateOrderResponse createOrderFromCartSimple(UUID customerId, CreateOrderRequest request, String bearerToken) {
         String lockKey = "order:create:" + customerId;
         
         try {
@@ -93,7 +93,8 @@ public class OrderService {
                         orderMenuList,
                         request.getOrderType(),
                         request.getUsePoints(),
-                        request.getPointsToUse()
+                        request.getPointsToUse(),
+                        bearerToken
                     );
 
                     // 이벤트 발행 (주문 생성)
@@ -142,6 +143,18 @@ public class OrderService {
             );
         } catch (Exception e) {
             log.error("Order creation failed for customer: {}", customerId, e);
+            
+            // 포인트 검증 실패인 경우 원본 예외 메시지 유지
+            if (e.getMessage() != null && (
+                e.getMessage().contains("포인트가 부족합니다") ||
+                e.getMessage().contains("포인트는 주문 총액을 초과할 수 없습니다") ||
+                e.getMessage().contains("포인트 검증에 실패했습니다") ||
+                e.getMessage().contains("사용자 포인트를 조회할 수 없습니다") ||
+                e.getMessage().contains("Customer service is temporarily unavailable")
+            )) {
+                throw new RuntimeException(e.getMessage(), e); // 포인트 관련 예외는 RuntimeException으로 래핑
+            }
+            
             if (e instanceof OrderException) {
                 throw (OrderException) e;
             }
@@ -150,7 +163,7 @@ public class OrderService {
     }
 
     public Order createPendingOrder(UUID customerId, UUID storeId, List<OrderMenu> orderMenuList, String orderType,
-                                   Boolean usePoints, Integer pointsToUse) {
+                                   Boolean usePoints, Integer pointsToUse, String bearerToken) {
         String orderNumber = generateOrderNumber();
 
         OrderStatusCode statusCode = orderStatusCodeRepository.findByCode("PENDING")
@@ -183,6 +196,39 @@ public class OrderService {
         }
         if (pointsToUse == null) {
             pointsToUse = 0;
+        }
+
+        // 포인트 사용 검증 로직 추가
+        if (usePoints && pointsToUse > 0) {
+            try {
+                // CustomerService에서 사용자 포인트 조회 (토큰 전달)
+                Integer customerPoints = externalApiService.getCustomerPoints(customerId, bearerToken);
+                
+                if (customerPoints == null) {
+                    throw new RuntimeException("사용자 포인트를 조회할 수 없습니다. 잠시 후 다시 시도해주세요.");
+                }
+                
+                if (pointsToUse > customerPoints) {
+                    throw new RuntimeException(
+                        String.format("포인트가 부족합니다. 보유 포인트: %d원, 사용하려는 포인트: %d원", 
+                                    customerPoints, pointsToUse)
+                    );
+                }
+                
+                if (pointsToUse > totalPrice) {
+                    throw new RuntimeException(
+                        String.format("포인트는 주문 총액을 초과할 수 없습니다. 주문 총액: %d원, 사용하려는 포인트: %d원", 
+                                    totalPrice, pointsToUse)
+                    );
+                }
+                
+                log.info("포인트 사용 검증 통과: customerId={}, 보유포인트={}, 사용포인트={}, 주문총액={}", 
+                         customerId, customerPoints, pointsToUse, totalPrice);
+                         
+            } catch (Exception e) {
+                log.error("포인트 검증 실패: customerId={}, pointsToUse={}", customerId, pointsToUse, e);
+                throw new RuntimeException("포인트 검증에 실패했습니다: " + e.getMessage());
+            }
         }
 
         Integer finalPaymentAmount = Math.max(totalPrice - pointsToUse, 0);
