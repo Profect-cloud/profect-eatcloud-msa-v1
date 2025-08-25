@@ -106,6 +106,9 @@ dependencies {
     annotationProcessor 'jakarta.annotation:jakarta.annotation-api:2.1.1'
 
     implementation "org.springframework.cloud:spring-cloud-starter-loadbalancer"
+
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+
     implementation project(":auto-response")
     implementation project(":auto-time")
 
