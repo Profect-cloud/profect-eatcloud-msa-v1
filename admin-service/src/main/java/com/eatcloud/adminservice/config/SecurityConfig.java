@@ -33,6 +33,7 @@ public class SecurityConfig {
                                 "/stores/**",         // ✅ 필요시
                                 "/internal/**",       // ✅ 앞에 / 필요
                                 "/actuator/**",
+                                "/api/v1/admin/actuator/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         ).permitAll()
