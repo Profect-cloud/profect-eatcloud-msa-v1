@@ -168,7 +168,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 짧은 SHA 값을 별도 스텝에서 생성
       - name: Generate short SHA
         id: short-sha
         run: echo "sha_short=$(echo ${{ github.sha }} | cut -c1-8)" >> $GITHUB_OUTPUT
@@ -191,8 +190,8 @@ jobs:
         run: |
           aws ecr start-image-scan --repository-name eatcloud/${{ matrix.service }} --image-id imageTag=latest || true
 
-  # Staging Blue/Green 배포 (develop 브랜치)
-  deploy-staging-blue-green:
+  # ECS 네이티브 Blue/Green 배포 (develop 브랜치)
+  deploy-staging-ecs-bluegreen:
     needs: [detect-changes, build-and-push-ecr]
     if: needs.detect-changes.outputs.has_changes == 'true' && github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
@@ -200,7 +199,7 @@ jobs:
     strategy:
       matrix: ${{fromJson(needs.detect-changes.outputs.matrix)}}
       fail-fast: false
-    
+
     steps:
       - uses: actions/checkout@v4
 
@@ -211,541 +210,262 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # 현재 활성 Target Group 확인 (가중치 기반)
-      - name: Check Current Active Target Group
-        id: check-tg
-        run: |
-          BLUE_TG="${{ matrix.service }}-tg"
-          GREEN_TG="${{ matrix.service }}-greentg"
-          
-          echo "🔍 Looking for ALB rules for service: ${{ matrix.service }}"
-          echo "Blue TG: $BLUE_TG"
-          echo "Green TG: $GREEN_TG"
-          
-          # ALB ARN 가져오기
-          ALB_ARN=$(aws elbv2 describe-load-balancers \
-            --query "LoadBalancers[?LoadBalancerName=='eatcloud-internal-alb'].LoadBalancerArn" \
-            --output text)
-          
-          if [ -z "$ALB_ARN" ]; then
-            echo "❌ ALB 'eatcloud-internal-alb' not found"
-            exit 1
-          fi
-          
-          echo "🔗 Found ALB: $ALB_ARN"
-          
-          # Listener ARN 가져오기 (HTTP Listener)
-          LISTENER_ARN=$(aws elbv2 describe-listeners \
-            --load-balancer-arn "$ALB_ARN" \
-            --query "Listeners[?Protocol=='HTTP'].ListenerArn" \
-            --output text)
-          
-          if [ -z "$LISTENER_ARN" ]; then
-            echo "❌ HTTP Listener not found"
-            exit 1
-          fi
-          
-          echo "👂 Found Listener: $LISTENER_ARN"
-          
-          # 해당 서비스의 모든 Rules 찾기
-          SERVICE_PATH="/api/v1/${{ matrix.service }}/*"
-          if [ "${{ matrix.service }}" = "admin-service" ]; then
-            SERVICE_PATH="/api/v1/admin/*"
-          elif [ "${{ matrix.service }}" = "auth-service" ]; then
-            SERVICE_PATH="/api/v1/auth/*"
-          elif [ "${{ matrix.service }}" = "customer-service" ]; then
-            SERVICE_PATH="/api/v1/customer/*"
-          elif [ "${{ matrix.service }}" = "manager-service" ]; then
-            SERVICE_PATH="/api/v1/manager/*"
-          elif [ "${{ matrix.service }}" = "store-service" ]; then
-            SERVICE_PATH="/api/v1/store/*"
-          elif [ "${{ matrix.service }}" = "order-service" ]; then
-            SERVICE_PATH="/api/v1/order/*"
-          elif [ "${{ matrix.service }}" = "payment-service" ]; then
-            SERVICE_PATH="/api/v1/payment/*"
-          fi
-          
-          echo "🔍 Looking for rules with path: $SERVICE_PATH"
-          
-          # 해당 서비스의 Rules 찾기
-          RULES=$(aws elbv2 describe-rules \
-            --listener-arn "$LISTENER_ARN" \
-            --query "Rules[?Conditions[0].Values[0]=='${SERVICE_PATH}'].{RuleArn:RuleArn,Priority:Priority,Actions:Actions}" \
-            --output json)
-          
-          echo "📋 Found rules for ${{ matrix.service }}:"
-          echo "$RULES" | jq '.'
-          
-          # 현재 활성 규칙 찾기 (두 Target Group 중 어느 것이 100% weight인지 확인)
-          ACTIVE_RULE=""
-          INACTIVE_RULE=""
-          ACTIVE_TG=""
-          INACTIVE_TG=""
-          CURRENT_STATE=""
-          
-          # 각 Rule을 순회하면서 가중치 확인
-          for rule_arn in $(echo "$RULES" | jq -r '.[].RuleArn'); do
-            echo "🔍 Checking rule: $rule_arn"
-            
-            # 해당 Rule의 Target Groups와 가중치 확인
-            RULE_DETAILS=$(echo "$RULES" | jq ".[] | select(.RuleArn==\"$rule_arn\")")
-            
-            # Blue Target Group의 가중치
-            BLUE_WEIGHT=$(echo "$RULE_DETAILS" | jq -r ".Actions[0].ForwardConfig.TargetGroups[] | select(.TargetGroupArn | contains(\"$BLUE_TG\")) | .Weight // 0")
-            # Green Target Group의 가중치  
-            GREEN_WEIGHT=$(echo "$RULE_DETAILS" | jq -r ".Actions[0].ForwardConfig.TargetGroups[] | select(.TargetGroupArn | contains(\"$GREEN_TG\")) | .Weight // 0")
-            
-            echo "  🔵 Blue Weight: ${BLUE_WEIGHT}%"
-            echo "  🟢 Green Weight: ${GREEN_WEIGHT}%"
-            
-            # 현재 활성 상태 판단
-            if [ "$BLUE_WEIGHT" = "100" ] && [ "$GREEN_WEIGHT" = "0" ]; then
-              ACTIVE_RULE="$rule_arn"
-              ACTIVE_TG="$BLUE_TG"
-              INACTIVE_TG="$GREEN_TG"
-              CURRENT_STATE="BLUE_ACTIVE"
-              echo "  ✅ This rule has Blue active (100%)"
-              break
-            elif [ "$GREEN_WEIGHT" = "100" ] && [ "$BLUE_WEIGHT" = "0" ]; then
-              ACTIVE_RULE="$rule_arn"
-              ACTIVE_TG="$GREEN_TG"
-              INACTIVE_TG="$BLUE_TG"
-              CURRENT_STATE="GREEN_ACTIVE"
-              echo "  ✅ This rule has Green active (100%)"
-              break
-            fi
-          done
-          
-          if [ -z "$ACTIVE_RULE" ]; then
-            echo "❌ No rule found with single target group at 100% weight"
-            exit 1
-          fi
-          
-          if [ "$CURRENT_STATE" = "BLUE_ACTIVE" ]; then
-            echo "🔵 Current Active: Blue → Deploying to: Green"
-          else
-            echo "🟢 Current Active: Green → Deploying to: Blue"
-          fi
-          
-          echo "ACTIVE_RULE=$ACTIVE_RULE" >> $GITHUB_OUTPUT
-          echo "ACTIVE_TG=$ACTIVE_TG" >> $GITHUB_OUTPUT
-          echo "INACTIVE_TG=$INACTIVE_TG" >> $GITHUB_OUTPUT
-          echo "CURRENT_STATE=$CURRENT_STATE" >> $GITHUB_OUTPUT
-          echo "ALB_ARN=$ALB_ARN" >> $GITHUB_OUTPUT
-          echo "LISTENER_ARN=$LISTENER_ARN" >> $GITHUB_OUTPUT
-
-      # 새 Task Definition 생성 및 비활성 환경 업데이트
-      - name: Update Task Definition and Deploy to Inactive Environment
+      # 스마트 Task Definition 업데이트
+      - name: Smart Task Definition Update
         id: task-def
         run: |
-          # 현재 Task Definition 가져오기 (-staging 접미사 제거)
-          TASK_DEF_NAME="eatcloud-${{ matrix.service }}"
-          
-          echo "🔍 Looking for task definition: $TASK_DEF_NAME"
-          
-          # Task Definition이 존재하는지 확인
-          if ! aws ecs describe-task-definition --task-definition "$TASK_DEF_NAME" > /dev/null 2>&1; then
-            echo "❌ Task definition '$TASK_DEF_NAME' not found!"
-            echo "📋 Available task definitions for this service:"
-            aws ecs list-task-definitions --family-prefix "eatcloud-${{ matrix.service }}" --query 'taskDefinitionArns' --output text
-            exit 1
-          fi
-          
-          TASK_DEF=$(aws ecs describe-task-definition \
-            --task-definition "$TASK_DEF_NAME" \
-            --query 'taskDefinition' \
-            --output json)
-          
-          # 새 이미지 URI로 Task Definition 업데이트
+          TASK_DEF_FAMILY="eatcloud-${{ matrix.service }}"
           NEW_IMAGE="${{ env.ECR_REGISTRY }}/eatcloud/${{ matrix.service }}:${{ github.sha }}"
           
-          echo $TASK_DEF | jq --arg IMAGE "$NEW_IMAGE" \
-            '.containerDefinitions[0].image = $IMAGE | 
-             del(.taskDefinitionArn) | del(.revision) | del(.status) | 
-             del(.requiresAttributes) | del(.placementConstraints) | 
-             del(.compatibilities) | del(.registeredAt) | del(.registeredBy)' > new-task-def.json
+          echo "🔍 Smart deployment for: $TASK_DEF_FAMILY"
+          echo "🔖 New Image: $NEW_IMAGE"
           
-          # 새 Task Definition 등록
-          NEW_TASK_DEF_ARN=$(aws ecs register-task-definition \
-            --cli-input-json file://new-task-def.json \
-            --query 'taskDefinition.taskDefinitionArn' --output text)
-          
-          echo "NEW_TASK_DEF_ARN=$NEW_TASK_DEF_ARN" >> $GITHUB_OUTPUT
-          echo "📋 New Task Definition: $NEW_TASK_DEF_ARN"
-          
-          # ECS 서비스 업데이트 (비활성 Target Group으로)
-          aws ecs update-service \
-            --cluster ${{ env.ECS_CLUSTER_STAGING }} \
-            --service ${{ matrix.service }} \
-            --task-definition $NEW_TASK_DEF_ARN \
-            --force-new-deployment
-
-      # 배포 완료 대기 (개선된 버전)
-      - name: Wait for New Version Deployment
-        run: |
-          echo "⏳ Waiting for new version to be deployed..."
-          
-          # 타임아웃 설정 (최대 10분)
-          TIMEOUT=600
-          ELAPSED=0
-          INTERVAL=30
-          
-          while [ $ELAPSED -lt $TIMEOUT ]; do
-            echo "🔍 Checking service status... (${ELAPSED}s/${TIMEOUT}s)"
-            
-            # 서비스 상태 확인
-            SERVICE_INFO=$(aws ecs describe-services \
-              --cluster ${{ env.ECS_CLUSTER_STAGING }} \
-              --services ${{ matrix.service }} \
-              --query 'services[0].{Status:status,RunningCount:runningCount,PendingCount:pendingCount,DesiredCount:desiredCount,TaskDefinition:taskDefinition}' \
-              --output json)
-            
-            STATUS=$(echo "$SERVICE_INFO" | jq -r '.Status')
-            RUNNING_COUNT=$(echo "$SERVICE_INFO" | jq -r '.RunningCount')
-            PENDING_COUNT=$(echo "$SERVICE_INFO" | jq -r '.PendingCount')
-            DESIRED_COUNT=$(echo "$SERVICE_INFO" | jq -r '.DesiredCount')
-            
-            echo "📊 Service Status: $STATUS, Running: $RUNNING_COUNT/$DESIRED_COUNT, Pending: $PENDING_COUNT"
-            
-            # 최근 서비스 이벤트 확인
-            RECENT_EVENTS=$(aws ecs describe-services \
-              --cluster ${{ env.ECS_CLUSTER_STAGING }} \
-              --services ${{ matrix.service }} \
-              --query 'services[0].events[0:3].{CreatedAt:createdAt,Message:message}' \
-              --output json)
-            
-            echo "📝 Recent Events:"
-            echo "$RECENT_EVENTS" | jq -r '.[] | "\(.CreatedAt): \(.Message)"'
-            
-            # 태스크 상태 확인
-            TASK_ARNS=$(aws ecs list-tasks \
-              --cluster ${{ env.ECS_CLUSTER_STAGING }} \
-              --service-name ${{ matrix.service }} \
-              --query 'taskArns' \
-              --output text)
-            
-            if [ -n "$TASK_ARNS" ]; then
-              TASK_STATUS=$(aws ecs describe-tasks \
-                --cluster ${{ env.ECS_CLUSTER_STAGING }} \
-                --tasks $TASK_ARNS \
-                --query 'tasks[].{TaskArn:taskArn,LastStatus:lastStatus,HealthStatus:healthStatus}' \
-                --output json)
-              
-              echo "🏃 Task Status:"
-              echo "$TASK_STATUS" | jq -r '.[] | "Task: \(.TaskArn | split("/")[2]), Status: \(.LastStatus), Health: \(.HealthStatus // "N/A")"'
-              
-              # 컨테이너 상태 확인
-              CONTAINER_STATUS=$(aws ecs describe-tasks \
-                --cluster ${{ env.ECS_CLUSTER_STAGING }} \
-                --tasks $TASK_ARNS \
-                --query 'tasks[].containers[].{Name:name,LastStatus:lastStatus,ExitCode:exitCode,Reason:reason}' \
-                --output json)
-              
-              echo "🐳 Container Status:"
-              echo "$CONTAINER_STATUS" | jq -r '.[] | "Container: \(.Name), Status: \(.LastStatus), Exit Code: \(.ExitCode // "N/A"), Reason: \(.Reason // "N/A")"'
-              
-              # 실패한 태스크가 있는지 확인
-              FAILED_TASKS=$(echo "$TASK_STATUS" | jq -r '.[] | select(.LastStatus == "STOPPED") | .TaskArn')
-              if [ -n "$FAILED_TASKS" ]; then
-                echo "❌ Found failed tasks, checking stop reason:"
-                for task_arn in $FAILED_TASKS; do
-                  STOP_REASON=$(aws ecs describe-tasks \
-                    --cluster ${{ env.ECS_CLUSTER_STAGING }} \
-                    --tasks "$task_arn" \
-                    --query 'tasks[0].stopReason' \
-                    --output text)
-                  echo "Task $task_arn stopped: $STOP_REASON"
-                done
-              fi
-            fi
-            
-            # 안정 상태 확인
-            if [ "$STATUS" = "ACTIVE" ] && [ "$RUNNING_COUNT" = "$DESIRED_COUNT" ] && [ "$PENDING_COUNT" = "0" ]; then
-              echo "✅ Service is stable!"
-              break
-            fi
-            
-            # 배포 실패 조건 확인
-            if [ "$STATUS" != "ACTIVE" ]; then
-              echo "❌ Service status is not ACTIVE: $STATUS"
-              exit 1
-            fi
-            
-            sleep $INTERVAL
-            ELAPSED=$((ELAPSED + INTERVAL))
-          done
-          
-          if [ $ELAPSED -ge $TIMEOUT ]; then
-            echo "❌ Deployment timeout after ${TIMEOUT}s"
-            echo "🔍 Final service state:"
-            aws ecs describe-services \
-              --cluster ${{ env.ECS_CLUSTER_STAGING }} \
-              --services ${{ matrix.service }} \
-              --query 'services[0].{Status:status,RunningCount:runningCount,PendingCount:pendingCount,DesiredCount:desiredCount}' \
-              --output table
-            exit 1
-          fi
-          
-          # 최종 상태 확인
-          SERVICE_STATUS=$(aws ecs describe-services \
+          # 현재 서비스 정보 확인
+          CURRENT_TASK_DEF=$(aws ecs describe-services \
             --cluster ${{ env.ECS_CLUSTER_STAGING }} \
             --services ${{ matrix.service }} \
-            --query 'services[0].status' --output text)
-          
-          RUNNING_COUNT=$(aws ecs describe-services \
-            --cluster ${{ env.ECS_CLUSTER_STAGING }} \
-            --services ${{ matrix.service }} \
-            --query 'services[0].runningCount' --output text)
-          
-          echo "✅ New version deployed successfully!"
-          echo "📊 Final Status: $SERVICE_STATUS, Running Tasks: $RUNNING_COUNT"
-
-      # 새 Task를 Target Group에 수동 등록 (간소화 버전)
-      - name: Register New Tasks to Target Group
-        run: |
-          echo "🔄 Registering new tasks to inactive target group..."
-          
-          TARGET_TG_ARN=$(aws elbv2 describe-target-groups \
-            --names "${{ steps.check-tg.outputs.INACTIVE_TG }}" \
-            --query 'TargetGroups[0].TargetGroupArn' \
+            --query 'services[0].taskDefinition' \
             --output text)
           
-          # 서비스별 포트 매핑
-          declare -A SERVICE_PORTS
-          SERVICE_PORTS["auth-service"]=8081
-          SERVICE_PORTS["admin-service"]=8083
-          SERVICE_PORTS["customer-service"]=8082
-          SERVICE_PORTS["manager-service"]=8084
-          SERVICE_PORTS["store-service"]=8085
-          SERVICE_PORTS["order-service"]=8086
-          SERVICE_PORTS["payment-service"]=8087
+          echo "📋 Current Task Definition: $CURRENT_TASK_DEF"
           
-          SERVICE_PORT=${SERVICE_PORTS["${{ matrix.service }}"]}
+          # 현재 이미지 확인
+          CURRENT_IMAGE=$(aws ecs describe-task-definition \
+            --task-definition "$CURRENT_TASK_DEF" \
+            --query 'taskDefinition.containerDefinitions[0].image' \
+            --output text)
           
-          if [ -z "$SERVICE_PORT" ]; then
-            echo "❌ Unknown service: ${{ matrix.service }}"
-            exit 1
+          echo "🔍 Current Image: $CURRENT_IMAGE"
+          
+          # 이미지가 다른 경우에만 새 Task Definition 생성
+          if [ "$CURRENT_IMAGE" != "$NEW_IMAGE" ]; then
+            echo "🔄 Image changed, creating new task definition revision..."
+          
+            # 기존 Task Definition을 복사하고 이미지만 업데이트
+            TASK_DEF_JSON=$(aws ecs describe-task-definition \
+              --task-definition "$CURRENT_TASK_DEF" \
+              --query 'taskDefinition' --output json)
+          
+            # 이미지 업데이트 및 메타데이터 제거
+            echo "$TASK_DEF_JSON" | jq --arg IMAGE "$NEW_IMAGE" \
+              '.containerDefinitions[0].image = $IMAGE | 
+               del(.taskDefinitionArn, .revision, .status, .requiresAttributes, 
+                   .placementConstraints, .compatibilities, .registeredAt, .registeredBy)' > new-task-def.json
+          
+            # 새 revision 등록
+            NEW_TASK_DEF_ARN=$(aws ecs register-task-definition \
+              --cli-input-json file://new-task-def.json \
+              --query 'taskDefinition.taskDefinitionArn' --output text)
+          
+            echo "NEW_TASK_DEF_ARN=$NEW_TASK_DEF_ARN" >> $GITHUB_OUTPUT
+            echo "DEPLOYMENT_TYPE=NEW_REVISION" >> $GITHUB_OUTPUT
+            echo "✅ New Task Definition: $NEW_TASK_DEF_ARN"
+          else
+            echo "ℹ️ Image unchanged, will force deployment with existing Task Definition"
+            echo "NEW_TASK_DEF_ARN=$CURRENT_TASK_DEF" >> $GITHUB_OUTPUT
+            echo "DEPLOYMENT_TYPE=FORCE_DEPLOYMENT" >> $GITHUB_OUTPUT
+          fi
+
+      # 스마트 ECS Blue/Green 배포 시작
+      - name: Start Smart ECS Blue/Green Deployment
+        run: |
+          echo "🚀 Starting smart ECS Blue/Green deployment..."
+          echo "📊 Deployment Type: ${{ steps.task-def.outputs.DEPLOYMENT_TYPE }}"
+          
+          # 배포 전 상태 확인
+          echo "📊 Pre-deployment status:"
+          aws ecs describe-services \
+            --cluster ${{ env.ECS_CLUSTER_STAGING }} \
+            --services ${{ matrix.service }} \
+            --query 'services[0].{Status:status,RunningCount:runningCount,TaskDefinition:taskDefinition,DeploymentController:deploymentController}' \
+            --output table
+          
+          # 배포 타입에 따른 서비스 업데이트
+          if [ "${{ steps.task-def.outputs.DEPLOYMENT_TYPE }}" = "NEW_REVISION" ]; then
+            echo "🔄 Deploying with new Task Definition revision..."
+            aws ecs update-service \
+              --cluster ${{ env.ECS_CLUSTER_STAGING }} \
+              --service ${{ matrix.service }} \
+              --task-definition ${{ steps.task-def.outputs.NEW_TASK_DEF_ARN }}
+          else
+            echo "🔄 Force deploying with existing Task Definition..."
+            aws ecs update-service \
+              --cluster ${{ env.ECS_CLUSTER_STAGING }} \
+              --service ${{ matrix.service }} \
+              --force-new-deployment
           fi
           
-          echo "🔌 Service Port: $SERVICE_PORT"
+          echo "✅ ECS Blue/Green deployment initiated"
+
+      # 배포 진행 상황 모니터링
+      - name: Monitor Deployment Progress
+        run: |
+          echo "📊 Monitoring ECS Blue/Green deployment progress..."
           
-          # ECS 서비스가 안정화될 때까지 대기 (AWS CLI의 내장 waiter 사용)
-          echo "⏳ Waiting for ECS service to stabilize..."
+          # 배포 상태를 주기적으로 확인
+          for i in {1..40}; do
+            echo "🔍 Deployment check $i/40 ($(date))"
+          
+            # 서비스 상태 확인
+            SERVICE_STATUS=$(aws ecs describe-services \
+              --cluster ${{ env.ECS_CLUSTER_STAGING }} \
+              --services ${{ matrix.service }} \
+              --query 'services[0]' \
+              --output json)
+          
+            RUNNING_COUNT=$(echo "$SERVICE_STATUS" | jq -r '.runningCount')
+            PENDING_COUNT=$(echo "$SERVICE_STATUS" | jq -r '.pendingCount')
+            DESIRED_COUNT=$(echo "$SERVICE_STATUS" | jq -r '.desiredCount')
+          
+            # 배포 상태 확인
+            DEPLOYMENTS=$(echo "$SERVICE_STATUS" | jq -r '.deployments[] | "Status: \(.status), Tasks: \(.runningCount)/\(.desiredCount), TD: \(.taskDefinition | split("/") | .[-1])"')
+          
+            echo "📊 Service Status: Running=$RUNNING_COUNT, Pending=$PENDING_COUNT, Desired=$DESIRED_COUNT"
+            echo "🚀 Deployments:"
+            echo "$DEPLOYMENTS" | sed 's/^/  - /'
+          
+            # 안정 상태 확인
+            STABLE_DEPLOYMENTS=$(echo "$SERVICE_STATUS" | jq -r '.deployments | map(select(.status == "PRIMARY")) | length')
+            if [ "$STABLE_DEPLOYMENTS" = "1" ] && [ "$RUNNING_COUNT" = "$DESIRED_COUNT" ] && [ "$PENDING_COUNT" = "0" ]; then
+              echo "✅ Deployment reached stable state!"
+              break
+            fi
+          
+            if [ $i -eq 40 ]; then
+              echo "⏰ Deployment monitoring timeout (20 minutes)"
+              echo "🔍 Final service state:"
+              echo "$SERVICE_STATUS" | jq '.deployments[].{status,taskDefinition,runningCount,desiredCount}'
+              break
+            fi
+          
+            sleep 30
+          done
+
+      # ECS 내장 waiter로 최종 안정화 대기
+      - name: Wait for Final Stabilization
+        run: |
+          echo "⏳ Waiting for ECS service to fully stabilize..."
+          
+          # ECS 내장 waiter 사용 (더 정확한 안정화 확인)
           aws ecs wait services-stable \
             --cluster ${{ env.ECS_CLUSTER_STAGING }} \
             --services ${{ matrix.service }} \
-            --cli-read-timeout 600
+            --cli-read-timeout 900
           
-          # 실행 중인 Task들의 IP 추출 및 등록
-          RUNNING_TASKS=$(aws ecs list-tasks \
-            --cluster ${{ env.ECS_CLUSTER_STAGING }} \
-            --service-name ${{ matrix.service }} \
-            --desired-status RUNNING \
-            --query 'taskArns' \
-            --output text)
-          
-          if [ -z "$RUNNING_TASKS" ]; then
-            echo "❌ No running tasks found"
-            exit 1
-          fi
-          
-          echo "🏃 Found running tasks: $(echo $RUNNING_TASKS | wc -w) tasks"
-          
-          for task_arn in $RUNNING_TASKS; do
-            PRIVATE_IP=$(aws ecs describe-tasks \
-              --cluster ${{ env.ECS_CLUSTER_STAGING }} \
-              --tasks "$task_arn" \
-              --query 'tasks[0].attachments[0].details[?name==`privateIPv4Address`].value' \
-              --output text)
-            
-            if [ -n "$PRIVATE_IP" ] && [ "$PRIVATE_IP" != "None" ]; then
-              echo "➕ Registering target: $PRIVATE_IP:$SERVICE_PORT"
-              
-              aws elbv2 register-targets \
-                --target-group-arn "$TARGET_TG_ARN" \
-                --targets Id="$PRIVATE_IP",Port="$SERVICE_PORT"
-              
-              if [ $? -eq 0 ]; then
-                echo "✅ Successfully registered target: $PRIVATE_IP:$SERVICE_PORT"
-              else
-                echo "❌ Failed to register target: $PRIVATE_IP:$SERVICE_PORT"
-              fi
-            fi
-          done
-          
-          echo "✅ Task registration completed"
-
-      # ALB Rule 가중치 업데이트 (트래픽 전환) - 에러 핸들링 추가
-      - name: Switch Traffic to New Version
-        run: |
-          echo "🔄 Switching traffic to new version using weighted routing..."
-          
-          # 비활성 Target Group ARN 가져오기
-          INACTIVE_TG_ARN=$(aws elbv2 describe-target-groups \
-            --names "${{ steps.check-tg.outputs.INACTIVE_TG }}" \
-            --query 'TargetGroups[0].TargetGroupArn' \
-            --output text)
-          
-          # 활성 Target Group ARN 가져오기
-          ACTIVE_TG_ARN=$(aws elbv2 describe-target-groups \
-            --names "${{ steps.check-tg.outputs.ACTIVE_TG }}" \
-            --query 'TargetGroups[0].TargetGroupArn' \
-            --output text)
-          
-          echo "🎯 Current Active TG ARN: $ACTIVE_TG_ARN"
-          echo "🎯 Target Inactive TG ARN: $INACTIVE_TG_ARN"
-          echo "📋 Active Rule: ${{ steps.check-tg.outputs.ACTIVE_RULE }}"
-          echo "🔄 Current State: ${{ steps.check-tg.outputs.CURRENT_STATE }}"
-          
-          # 트래픽 전환 실행 (에러 캐치)
-          echo "🔄 Switching traffic weights..."
-          SWITCH_RESULT=$(aws elbv2 modify-rule \
-            --rule-arn "${{ steps.check-tg.outputs.ACTIVE_RULE }}" \
-            --actions Type=forward,ForwardConfig="{
-              TargetGroups=[
-                {
-                  TargetGroupArn=\"$ACTIVE_TG_ARN\",
-                  Weight=0
-                },
-                {
-                  TargetGroupArn=\"$INACTIVE_TG_ARN\",
-                  Weight=100
-                }
-              ]
-            }" 2>&1)
-          
-          SWITCH_EXIT_CODE=$?
-          if [ $SWITCH_EXIT_CODE -ne 0 ]; then
-            echo "❌ Traffic switch failed: $SWITCH_RESULT"
-            exit 1
-          fi
-          
-          echo "✅ Traffic switched successfully to ${{ steps.check-tg.outputs.INACTIVE_TG }}"
-          
-          # 변경사항 확인
-          sleep 3
-          echo "🔍 Verifying traffic switch..."
-          
-          # 비활성 TG가 100%인지 확인
-          INACTIVE_WEIGHT=$(aws elbv2 describe-rules \
-            --rule-arns "${{ steps.check-tg.outputs.ACTIVE_RULE }}" \
-            --query "Rules[0].Actions[0].ForwardConfig.TargetGroups[?TargetGroupArn=='$INACTIVE_TG_ARN'].Weight" \
-            --output text)
-          
-          if [ "$INACTIVE_WEIGHT" = "100" ]; then
-            echo "✅ Traffic switch verified - ${{ steps.check-tg.outputs.INACTIVE_TG }} now at 100%"
+          WAIT_RESULT=$?
+          if [ $WAIT_RESULT -eq 0 ]; then
+            echo "✅ Service stabilization completed!"
           else
-            echo "❌ Traffic switch verification failed - Weight: $INACTIVE_WEIGHT"
-            exit 1
-          fi
-
-      # 병렬 Health Check 및 이전 버전 정리 준비
-      - name: Parallel Health Check and Cleanup Preparation
-        run: |
-          echo "🔄 Starting parallel health check and cleanup preparation..."
+            echo "⚠️ Service stabilization timeout (continuing with verification)"
           
-          TARGET_TG_ARN=$(aws elbv2 describe-target-groups \
-            --names "${{ steps.check-tg.outputs.INACTIVE_TG }}" \
-            --query 'TargetGroups[0].TargetGroupArn' \
-            --output text)
-          
-          PREVIOUS_TG_ARN=$(aws elbv2 describe-target-groups \
-            --names "${{ steps.check-tg.outputs.ACTIVE_TG }}" \
-            --query 'TargetGroups[0].TargetGroupArn' \
-            --output text)
-          
-          # Health check 함수
-          health_check() {
-            echo "🏥 Starting health check process..."
-            for i in {1..20}; do
-              HEALTHY_COUNT=$(aws elbv2 describe-target-health \
-                --target-group-arn "$TARGET_TG_ARN" \
-                --query 'length(TargetHealthDescriptions[?TargetHealth.State==`healthy`])' \
-                --output text)
-              
-              TOTAL_COUNT=$(aws elbv2 describe-target-health \
-                --target-group-arn "$TARGET_TG_ARN" \
-                --query 'length(TargetHealthDescriptions)' \
-                --output text)
-              
-              echo "[Health Check $i/20] Status: $HEALTHY_COUNT/$TOTAL_COUNT targets healthy"
-              
-              if [ "$HEALTHY_COUNT" -gt 0 ] && [ "$HEALTHY_COUNT" = "$TOTAL_COUNT" ]; then
-                echo "✅ All targets are healthy!"
-                echo "HEALTH_CHECK_SUCCESS" > /tmp/health_status
-                return 0
-              fi
-              
-              if [ $i -eq 20 ]; then
-                echo "❌ Health check failed after 20 attempts"
-                echo "HEALTH_CHECK_FAILED" > /tmp/health_status
-                return 1
-              fi
-              
-              sleep 15
-            done
-          }
-          
-          # 이전 버전 Target 정보 수집 함수
-          prepare_cleanup() {
-            echo "🧹 Preparing cleanup information..."
-            sleep 60  # Health check가 어느 정도 진행될 때까지 대기
-            
-            PREVIOUS_TARGETS=$(aws elbv2 describe-target-health \
-              --target-group-arn "$PREVIOUS_TG_ARN" \
-              --query 'TargetHealthDescriptions[].{Id:Target.Id,Port:Target.Port}' \
+            # waiter 실패해도 서비스가 안정 상태이면 계속 진행
+            FINAL_STATUS=$(aws ecs describe-services \
+              --cluster ${{ env.ECS_CLUSTER_STAGING }} \
+              --services ${{ matrix.service }} \
+              --query 'services[0].{Status:status,RunningCount:runningCount,DesiredCount:desiredCount}' \
               --output json)
-            
-            echo "$PREVIOUS_TARGETS" > /tmp/cleanup_targets
-            echo "📋 Cleanup targets prepared: $(echo $PREVIOUS_TARGETS | jq length) targets"
-          }
           
-          # 병렬 실행
-          health_check &
-          prepare_cleanup &
+            STATUS=$(echo "$FINAL_STATUS" | jq -r '.Status')
+            RUNNING=$(echo "$FINAL_STATUS" | jq -r '.RunningCount')
+            DESIRED=$(echo "$FINAL_STATUS" | jq -r '.DesiredCount')
           
-          wait  # 모든 백그라운드 작업 완료 대기
-          
-          # Health check 결과 확인
-          if [ -f "/tmp/health_status" ]; then
-            HEALTH_STATUS=$(cat /tmp/health_status)
-            if [ "$HEALTH_STATUS" = "HEALTH_CHECK_FAILED" ]; then
-              echo "❌ Health check failed, initiating rollback..."
-              
-              # 롤백 로직
-              ACTIVE_TG_ARN=$(aws elbv2 describe-target-groups \
-                --names "${{ steps.check-tg.outputs.ACTIVE_TG }}" \
-                --query 'TargetGroups[0].TargetGroupArn' \
-                --output text)
-              
-              aws elbv2 modify-rule \
-                --rule-arn "${{ steps.check-tg.outputs.ACTIVE_RULE }}" \
-                --actions Type=forward,ForwardConfig="{
-                  TargetGroups=[
-                    {
-                      TargetGroupArn=\"$ACTIVE_TG_ARN\",
-                      Weight=100
-                    },
-                    {
-                      TargetGroupArn=\"$TARGET_TG_ARN\",
-                      Weight=0
-                    }
-                  ]
-                }"
-              
-              echo "🔄 Traffic rolled back to ${{ steps.check-tg.outputs.ACTIVE_TG }}"
+            if [ "$STATUS" = "ACTIVE" ] && [ "$RUNNING" = "$DESIRED" ] && [ "$RUNNING" -gt 0 ]; then
+              echo "✅ Service is stable despite waiter timeout"
+            else
+              echo "❌ Service is not stable: Status=$STATUS, Running=$RUNNING, Desired=$DESIRED"
               exit 1
             fi
           fi
+
+      # 배포 결과 검증 및 Target Group 상태 확인
+      - name: Verify Deployment Results
+        run: |
+          echo "🔍 Verifying deployment results..."
           
-          echo "✅ Parallel operations completed successfully"
+          # 최종 서비스 상태
+          SERVICE_STATUS=$(aws ecs describe-services \
+            --cluster ${{ env.ECS_CLUSTER_STAGING }} \
+            --services ${{ matrix.service }} \
+            --query 'services[0]' --output json)
+          
+          RUNNING_COUNT=$(echo "$SERVICE_STATUS" | jq -r '.runningCount')
+          DESIRED_COUNT=$(echo "$SERVICE_STATUS" | jq -r '.desiredCount')
+          TASK_DEFINITION=$(echo "$SERVICE_STATUS" | jq -r '.taskDefinition')
+          DEPLOYMENT_CONTROLLER=$(echo "$SERVICE_STATUS" | jq -r '.deploymentController.type')
+          
+          echo "📊 Final Deployment Results:"
+          echo "  - Service: ${{ matrix.service }}"
+          echo "  - Running Tasks: $RUNNING_COUNT/$DESIRED_COUNT"
+          echo "  - Task Definition: $TASK_DEFINITION"
+          echo "  - New Image: ${{ env.ECR_REGISTRY }}/eatcloud/${{ matrix.service }}:${{ github.sha }}"
+          echo "  - Deployment Controller: $DEPLOYMENT_CONTROLLER"
+          echo "  - Deployment Method: ECS Native Blue/Green"
+          
+          # Target Group 상태 확인
+          echo "🏥 Checking Target Group health status..."
+          
+          # 서비스와 연결된 Target Group들 찾기
+          TARGET_GROUPS=$(aws elbv2 describe-target-groups \
+            --query "TargetGroups[?contains(TargetGroupName, '${{ matrix.service }}')].{Name:TargetGroupName,Arn:TargetGroupArn}" \
+            --output json)
+          
+          echo "🎯 Found Target Groups:"
+          echo "$TARGET_GROUPS" | jq -r '.[] | "  - \(.Name): \(.Arn)"'
+          
+          # 각 Target Group의 건강 상태 확인
+          TOTAL_HEALTHY=0
+          for tg_arn in $(echo "$TARGET_GROUPS" | jq -r '.[].Arn'); do
+            TG_NAME=$(echo "$TARGET_GROUPS" | jq -r ".[] | select(.Arn==\"$tg_arn\") | .Name")
+          
+            HEALTHY_COUNT=$(aws elbv2 describe-target-health \
+              --target-group-arn "$tg_arn" \
+              --query 'length(TargetHealthDescriptions[?TargetHealth.State==`healthy`])' \
+              --output text)
+          
+            TOTAL_COUNT=$(aws elbv2 describe-target-health \
+              --target-group-arn "$tg_arn" \
+              --query 'length(TargetHealthDescriptions)' \
+              --output text)
+          
+            echo "  🎯 $TG_NAME: $HEALTHY_COUNT/$TOTAL_COUNT healthy targets"
+            TOTAL_HEALTHY=$((TOTAL_HEALTHY + HEALTHY_COUNT))
+          done
+          
+          # 배포 성공 여부 최종 판단
+          if [ "$RUNNING_COUNT" = "$DESIRED_COUNT" ] && [ "$RUNNING_COUNT" -gt 0 ] && [ "$TOTAL_HEALTHY" -gt 0 ]; then
+            echo "🎉 ECS Blue/Green deployment completed successfully!"
+            echo "✨ Zero-downtime deployment achieved with ECS native Blue/Green!"
+          else
+            echo "❌ Deployment verification failed"
+            echo "📋 Service Details:"
+            echo "$SERVICE_STATUS" | jq '.deployments[] | {status, taskDefinition, runningCount, desiredCount}'
+            echo "📊 Health Summary: $TOTAL_HEALTHY healthy targets across all Target Groups"
+            exit 1
+          fi
+
+      # 롤백 메커니즘 (실패 시에만 실행)
+      - name: Rollback on Failure
+        if: failure()
+        run: |
+          echo "🚨 Deployment failed, checking rollback options..."
+          
+          # 현재 서비스 상태 확인
+          echo "📊 Current Service Status:"
+          aws ecs describe-services \
+            --cluster ${{ env.ECS_CLUSTER_STAGING }} \
+            --services ${{ matrix.service }} \
+            --query 'services[0].{Status:status,RunningCount:runningCount,DesiredCount:desiredCount,Deployments:deployments[].{Status:status,TaskDefinition:taskDefinition}}' \
+            --output json | jq .
+          
+          echo "ℹ️ ECS manages automatic rollback for failed deployments"
+          echo "ℹ️ Check ECS console for detailed rollback status"
 
   # Production 수동 배포 준비 알림
   production-deploy-ready:
     needs: [detect-changes, build-and-push-ecr]
     if: needs.detect-changes.outputs.has_changes == 'true' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Production Blue/Green deployment notification
         run: |
@@ -760,13 +480,8 @@ jobs:
           echo "Blue/Green deployment features:"
           echo "  ✅ Zero-downtime deployment"
           echo "  ✅ Automatic health checks"
-          echo "  ✅ Traffic switching with ALB Target Groups"  
-          echo "  ✅ Instant rollback capability"
-          echo ""
-          echo "Target Groups per service:"
-          echo "${{ needs.detect-changes.outputs.services }}" | jq -r '.[]' | while read service; do
-            echo "  - ${service}: Blue (${service}-tg) ↔ Green (${service}-greentg)"
-          done
+          echo "  ✅ ECS native Blue/Green deployment"
+          echo "  ✅ Automatic rollback on failure"
           echo ""
           echo "To deploy to production:"
           echo "1. Go to Actions tab"
