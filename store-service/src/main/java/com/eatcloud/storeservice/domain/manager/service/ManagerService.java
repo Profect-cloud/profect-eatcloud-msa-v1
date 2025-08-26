@@ -5,6 +5,7 @@ import com.eatcloud.storeservice.domain.menu.entity.Menu;
 import com.eatcloud.storeservice.domain.menu.exception.MenuErrorCode;
 import com.eatcloud.storeservice.domain.menu.exception.MenuException;
 import com.eatcloud.storeservice.domain.menu.repository.MenuRepository;
+import com.eatcloud.storeservice.domain.menuai.service.TFIDFService;
 import com.eatcloud.storeservice.domain.store.dto.StoreRequestDto;
 import com.eatcloud.storeservice.domain.store.entity.Store;
 import com.eatcloud.storeservice.domain.store.exception.StoreErrorCode;
@@ -15,19 +16,27 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@Slf4j
 public class ManagerService {
 
     private final MenuRepository menuRepository;
     private final StoreRepository storeRepository;
+    private final TFIDFService tfidfService;
 
     @Autowired
-    public ManagerService(MenuRepository menuRepository, StoreRepository storeRepository) {
+    public ManagerService(MenuRepository menuRepository, StoreRepository storeRepository, TFIDFService tfidfService) {
         this.menuRepository = menuRepository;
         this.storeRepository = storeRepository;
+        this.tfidfService = tfidfService;
     }
 
+    // 메뉴 생성
+    @Transactional
     public Menu createMenu(UUID storeId, MenuRequestDto dto) {
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new StoreException(StoreErrorCode.STORE_NOT_FOUND));
@@ -60,7 +69,18 @@ public class ManagerService {
                 .imageUrl(dto.getImageUrl())
                 .build();
 
-        return menuRepository.save(menu);
+        Menu savedMenu = menuRepository.save(menu);
+        log.info("메뉴 생성 완료: {}", savedMenu.getMenuName());
+
+        // TF-IDF 벡터 생성 및 저장 (동기 처리로 변경)
+        try {
+            tfidfService.generateAndSaveMenuVector(savedMenu);
+            log.info("메뉴 벡터 생성 완료: {}", savedMenu.getMenuName());
+        } catch (Exception e) {
+            log.error("메뉴 벡터 생성 실패: {}", savedMenu.getMenuName(), e);
+        }
+
+        return savedMenu;
     }
 
     public Menu updateMenu(UUID storeId, UUID menuId, MenuRequestDto dto) {
@@ -90,16 +110,38 @@ public class ManagerService {
         menu.setIsAvailable(dto.getIsAvailable() != null ? dto.getIsAvailable() : true);
         menu.setImageUrl(dto.getImageUrl());
 
-        return menuRepository.save(menu);
-    }
+        Menu updatedMenu = menuRepository.save(menu);
+        log.info("메뉴 수정 완료: {}", updatedMenu.getMenuName());
 
+        // 벡터 재생성 (비동기 처리)
+        CompletableFuture.runAsync(() -> {
+            try {
+                tfidfService.generateAndSaveMenuVector(updatedMenu);
+            } catch (Exception e) {
+                log.error("메뉴 벡터 재생성 실패: {}", updatedMenu.getMenuName(), e);
+            }
+        });
+
+        return updatedMenu;
+    }
 
     @Transactional
     public void deleteMenu(UUID menuId) {
-        menuRepository.findById(menuId)
+        Menu menu = menuRepository.findById(menuId)
                 .orElseThrow(() -> new MenuException(MenuErrorCode.MENU_NOT_FOUND));
 
+        String menuName = menu.getMenuName();
         menuRepository.softDeleteById(menuId,"매니저");
+        log.info("메뉴 삭제 완료: {}", menuName);
+
+        // 벡터도 함께 삭제 (비동기 처리)
+        CompletableFuture.runAsync(() -> {
+            try {
+                tfidfService.deleteMenuVector(menuName);
+            } catch (Exception e) {
+                log.error("메뉴 벡터 삭제 실패: {}", menuName, e);
+            }
+        });
     }
 
     public void updateStore(UUID storeId, StoreRequestDto dto) {
@@ -116,7 +158,4 @@ public class ManagerService {
         if (dto.getOpenTime() != null) store.setOpenTime(dto.getOpenTime());
         if (dto.getCloseTime() != null) store.setCloseTime(dto.getCloseTime());
     }
-
-
-
 }
