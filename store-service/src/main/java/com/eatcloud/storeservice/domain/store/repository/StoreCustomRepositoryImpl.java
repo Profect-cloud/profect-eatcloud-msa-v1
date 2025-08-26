@@ -47,7 +47,7 @@ public class StoreCustomRepositoryImpl implements StoreCustomRepository {
                     s.min_cost,
                     s.open_status
                 FROM p_stores s
-                WHERE s.category_id = :categoryId
+                WHERE s.store_category_id = :categoryId
                   AND ST_DWithin(
                         geography(ST_MakePoint(s.store_lon, s.store_lat)),
                         geography(ST_MakePoint(:lon, :lat)),

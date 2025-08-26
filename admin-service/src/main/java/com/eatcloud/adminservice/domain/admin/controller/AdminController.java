@@ -1,9 +1,6 @@
 package com.eatcloud.adminservice.domain.admin.controller;
 
-import com.eatcloud.adminservice.domain.admin.dto.AdminDto;
-import com.eatcloud.adminservice.domain.admin.dto.ManagerDto;
-import com.eatcloud.adminservice.domain.admin.dto.StoreDto;
-import com.eatcloud.adminservice.domain.admin.dto.UserDto;
+import com.eatcloud.adminservice.domain.admin.dto.*;
 import com.eatcloud.adminservice.domain.admin.message.ResponseMessage;
 import com.eatcloud.adminservice.domain.admin.service.AdminService;
 import com.eatcloud.autoresponse.core.ApiResponse;
@@ -106,9 +103,9 @@ public class AdminController {
 	}
 
 	@GetMapping("/search")
-	public ResponseEntity<AdminDto> searchByEmail(@RequestParam String email) {
-		AdminDto adminDto = adminService.findByEmail(email);
-		return ResponseEntity.ok(adminDto);
+	public ResponseEntity<UserLoginDto> searchByEmail(@RequestParam String email) {
+		UserLoginDto userLoginDto = adminService.findByEmail(email);
+		return ResponseEntity.ok(userLoginDto);
 	}
 
 }

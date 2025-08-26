@@ -18,14 +18,25 @@ public class RestClientsConfig {
         return RestClient.builder();
     }
 
-    // 이름을 명시적으로 지정
+    // Admin 서비스 호출용
     @Bean(name = "adminRestClient")
     public RestClient adminRestClient(
-            @Value("${admin.base-url}") String baseUrl,
+            @Value("${admin.service-id:admin-service}") String serviceId,
             RestClient.Builder builder
     ) {
         return builder
-                .baseUrl(baseUrl)   // eureka(유레카) 사용할 땐: http://admin-service
+                .baseUrl("lb://" + serviceId)   // Eureka 서비스ID 기반 호출
+                .build();
+    }
+
+    // Orders 서비스 호출용
+    @Bean(name = "ordersRestClient")
+    public RestClient ordersRestClient(
+            @Value("${orders.service-id:orders-service}") String serviceId,
+            RestClient.Builder builder
+    ) {
+        return builder
+                .baseUrl("lb://" + serviceId)   // Eureka 서비스ID 기반 호출
                 .build();
     }
 }

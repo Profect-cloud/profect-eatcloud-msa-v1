@@ -1,15 +1,13 @@
 package com.eatcloud.adminservice.domain.admin.service;
 
-import com.eatcloud.adminservice.domain.admin.dto.AdminDto;
-import com.eatcloud.adminservice.domain.admin.dto.ManagerDto;
-import com.eatcloud.adminservice.domain.admin.dto.StoreDto;
-import com.eatcloud.adminservice.domain.admin.dto.UserDto;
+import com.eatcloud.adminservice.domain.admin.dto.*;
 import com.eatcloud.adminservice.domain.admin.entity.Admin;
 import com.eatcloud.adminservice.domain.admin.repository.AdminRepository;
 import com.eatcloud.adminservice.ports.CustomerAdminPort;
 import com.eatcloud.adminservice.ports.ManagerDirectoryPort;
 import com.eatcloud.adminservice.ports.StoreDirectoryPort;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -63,11 +61,11 @@ public class AdminService {
 		storePort.softDeleteById(storeId);
 	}
 
-	public AdminDto findByEmail(String email) {
+	public UserLoginDto findByEmail(String email) {
 		Admin admin = adminRepository.findByEmail(email)
 				.orElseThrow(() -> new RuntimeException("Admin not found"));
 
-		return 	AdminDto.builder()
+		return UserLoginDto.builder()
 				.id(admin.getId())
 				.email(admin.getEmail())
 				.password(admin.getPassword())

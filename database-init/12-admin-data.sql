@@ -109,9 +109,9 @@ INSERT INTO p_admins (
     created_at, created_by, updated_at, updated_by
 )
 VALUES
-    (gen_random_uuid(), '관리자1', 'admin1@example.com', 'adminpw1', '010-1111-2222', 'MASTER',
+    (gen_random_uuid(), '관리자1', 'admin1@example.com', '$2a$12$hbYaL8KjbojlMgLvoXHdh.zXyOOkH07eYiXsJAmTDYEJ3IvPb45xa', '010-1111-2222', 'MASTER',
      now(), 'system', now(), 'system'),
-    (gen_random_uuid(), '관리자2', 'admin2@example.com', 'adminpw2', '010-3333-4444', 'REVIEWER',
+    (gen_random_uuid(), '관리자2', 'admin2@example.com', '$2a$12$6YsQY5C/14fh07vnQHwiT.2L/064QAmDdOELX335C1NwXb0pSuXhC', '010-3333-4444', 'REVIEWER',
      now(), 'system', now(), 'system')
 ON CONFLICT (email) DO NOTHING;
 
