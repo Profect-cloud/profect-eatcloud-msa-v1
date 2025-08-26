@@ -211,44 +211,116 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # 현재 활성 Target Group 확인
+      # 현재 활성 Target Group 확인 (가중치 기반)
       - name: Check Current Active Target Group
         id: check-tg
         run: |
-          # ALB Listener Rules를 확인하여 현재 활성 TG 파악
           BLUE_TG="${{ matrix.service }}-tg"
           GREEN_TG="${{ matrix.service }}-greentg"
           
-          # ALB ARN 가져오기 (서비스별로 다를 수 있음)
+          echo "🔍 Looking for ALB rules for service: ${{ matrix.service }}"
+          echo "Blue TG: $BLUE_TG"
+          echo "Green TG: $GREEN_TG"
+          
+          # ALB ARN 가져오기
           ALB_ARN=$(aws elbv2 describe-load-balancers \
-            --query "LoadBalancers[?contains(LoadBalancerName, 'eatcloud')].LoadBalancerArn" \
+            --query "LoadBalancers[?LoadBalancerName=='eatcloud-internal-alb'].LoadBalancerArn" \
             --output text)
           
-          # 현재 활성 TG 확인 (첫 번째 Listener의 기본 Action 기준)
-          CURRENT_TG=$(aws elbv2 describe-listeners \
-            --load-balancer-arn $ALB_ARN \
-            --query "Listeners[0].DefaultActions[0].TargetGroupArn" --output text)
-          
-          CURRENT_TG_NAME=$(aws elbv2 describe-target-groups \
-            --target-group-arns $CURRENT_TG \
-            --query "TargetGroups[0].TargetGroupName" --output text)
-          
-          if [[ "$CURRENT_TG_NAME" == "$BLUE_TG" ]]; then
-            TARGET_TG="$GREEN_TG"
-            INACTIVE_TG="$GREEN_TG"
-            ACTIVE_TG="$BLUE_TG"
-            echo "🔵 Current: Blue ($BLUE_TG) → Deploying to: Green ($GREEN_TG)"
-          else
-            TARGET_TG="$BLUE_TG" 
-            INACTIVE_TG="$BLUE_TG"
-            ACTIVE_TG="$GREEN_TG"
-            echo "🟢 Current: Green ($GREEN_TG) → Deploying to: Blue ($BLUE_TG)"
+          if [ -z "$ALB_ARN" ]; then
+            echo "❌ ALB 'eatcloud-internal-alb' not found"
+            exit 1
           fi
           
-          echo "TARGET_TG=$TARGET_TG" >> $GITHUB_OUTPUT
-          echo "INACTIVE_TG=$INACTIVE_TG" >> $GITHUB_OUTPUT
+          echo "🔗 Found ALB: $ALB_ARN"
+          
+          # Listener ARN 가져오기 (HTTP Listener)
+          LISTENER_ARN=$(aws elbv2 describe-listeners \
+            --load-balancer-arn "$ALB_ARN" \
+            --query "Listeners[?Protocol=='HTTP'].ListenerArn" \
+            --output text)
+          
+          if [ -z "$LISTENER_ARN" ]; then
+            echo "❌ HTTP Listener not found"
+            exit 1
+          fi
+          
+          echo "👂 Found Listener: $LISTENER_ARN"
+          
+          # 해당 서비스의 모든 Rules 찾기
+          SERVICE_PATH="/api/v1/${{ matrix.service }}/*"
+          if [ "${{ matrix.service }}" = "admin-service" ]; then
+            SERVICE_PATH="/api/v1/admin/*"
+          elif [ "${{ matrix.service }}" = "auth-service" ]; then
+            SERVICE_PATH="/api/v1/auth/*"
+          elif [ "${{ matrix.service }}" = "customer-service" ]; then
+            SERVICE_PATH="/api/v1/customer/*"
+          elif [ "${{ matrix.service }}" = "manager-service" ]; then
+            SERVICE_PATH="/api/v1/manager/*"
+          elif [ "${{ matrix.service }}" = "store-service" ]; then
+            SERVICE_PATH="/api/v1/store/*"
+          elif [ "${{ matrix.service }}" = "order-service" ]; then
+            SERVICE_PATH="/api/v1/order/*"
+          elif [ "${{ matrix.service }}" = "payment-service" ]; then
+            SERVICE_PATH="/api/v1/payment/*"
+          fi
+          
+          echo "🔍 Looking for rules with path: $SERVICE_PATH"
+          
+          # 해당 서비스의 Rules 찾기
+          RULES=$(aws elbv2 describe-rules \
+            --listener-arn "$LISTENER_ARN" \
+            --query "Rules[?Conditions[0].Values[0]=='${SERVICE_PATH}'].{RuleArn:RuleArn,Priority:Priority,Actions:Actions}" \
+            --output json)
+          
+          echo "📋 Found rules for ${{ matrix.service }}:"
+          echo "$RULES" | jq '.'
+          
+          # 현재 활성 규칙 찾기 (가중치가 100%인 규칙)
+          ACTIVE_RULE=""
+          INACTIVE_RULE=""
+          ACTIVE_TG=""
+          INACTIVE_TG=""
+          
+          # Blue Rule 찾기
+          BLUE_RULE=$(echo "$RULES" | jq -r ".[] | select(.Actions[0].ForwardConfig.TargetGroups[]?.TargetGroupArn | test(\"${BLUE_TG}\")) | .RuleArn")
+          # Green Rule 찾기  
+          GREEN_RULE=$(echo "$RULES" | jq -r ".[] | select(.Actions[0].ForwardConfig.TargetGroups[]?.TargetGroupArn | test(\"${GREEN_TG}\")) | .RuleArn")
+          
+          if [ -n "$BLUE_RULE" ]; then
+            BLUE_WEIGHT=$(echo "$RULES" | jq -r ".[] | select(.RuleArn==\"$BLUE_RULE\") | .Actions[0].ForwardConfig.TargetGroups[] | select(.TargetGroupArn | test(\"${BLUE_TG}\")) | .Weight")
+            echo "🔵 Blue Rule ($BLUE_RULE): Weight = $BLUE_WEIGHT%"
+          fi
+          
+          if [ -n "$GREEN_RULE" ]; then
+            GREEN_WEIGHT=$(echo "$RULES" | jq -r ".[] | select(.RuleArn==\"$GREEN_RULE\") | .Actions[0].ForwardConfig.TargetGroups[] | select(.TargetGroupArn | test(\"${GREEN_TG}\")) | .Weight")
+            echo "🟢 Green Rule ($GREEN_RULE): Weight = $GREEN_WEIGHT%"
+          fi
+          
+          # 현재 활성/비활성 규칙 결정
+          if [ "$BLUE_WEIGHT" = "100" ]; then
+            ACTIVE_RULE="$BLUE_RULE"
+            INACTIVE_RULE="$GREEN_RULE"
+            ACTIVE_TG="$BLUE_TG"
+            INACTIVE_TG="$GREEN_TG"
+            echo "🔵 Current Active: Blue → Deploying to: Green"
+          elif [ "$GREEN_WEIGHT" = "100" ]; then
+            ACTIVE_RULE="$GREEN_RULE"
+            INACTIVE_RULE="$BLUE_RULE"
+            ACTIVE_TG="$GREEN_TG"
+            INACTIVE_TG="$BLUE_TG"
+            echo "🟢 Current Active: Green → Deploying to: Blue"
+          else
+            echo "❌ No rule found with 100% weight"
+            exit 1
+          fi
+          
+          echo "ACTIVE_RULE=$ACTIVE_RULE" >> $GITHUB_OUTPUT
+          echo "INACTIVE_RULE=$INACTIVE_RULE" >> $GITHUB_OUTPUT
           echo "ACTIVE_TG=$ACTIVE_TG" >> $GITHUB_OUTPUT
+          echo "INACTIVE_TG=$INACTIVE_TG" >> $GITHUB_OUTPUT
           echo "ALB_ARN=$ALB_ARN" >> $GITHUB_OUTPUT
+          echo "LISTENER_ARN=$LISTENER_ARN" >> $GITHUB_OUTPUT
 
       # 새 Task Definition 생성 및 비활성 환경 업데이트
       - name: Update Task Definition and Deploy to Inactive Environment
@@ -307,26 +379,40 @@ jobs:
           echo "✅ New version deployed - Service Status: $SERVICE_STATUS, Running Tasks: $RUNNING_COUNT"
 
       # Health Check 및 Target Group 상태 확인
-      - name: Health Check on Inactive Target Group
+      - name: Health Check on Target Environment
         run: |
-          echo "🔍 Performing health checks on inactive environment..."
+          echo "🔍 Performing health checks on target environment..."
           
           # Target Group ARN 가져오기
           TARGET_TG_ARN=$(aws elbv2 describe-target-groups \
-            --names ${{ steps.check-tg.outputs.INACTIVE_TG }} \
-            --query 'TargetGroups[0].TargetGroupArn' --output text)
+            --names "${{ steps.check-tg.outputs.INACTIVE_TG }}" \
+            --query 'TargetGroups[0].TargetGroupArn' \
+            --output text)
+          
+          echo "🎯 Target Group ARN for health check: $TARGET_TG_ARN"
           
           # Health Check 상태 확인 (최대 10분 대기)
           for i in {1..20}; do
+            echo "🔍 Health Check attempt $i/20..."
+            
             HEALTHY_COUNT=$(aws elbv2 describe-target-health \
-              --target-group-arn $TARGET_TG_ARN \
-              --query 'length(TargetHealthDescriptions[?TargetHealth.State==`healthy`])' --output text)
+              --target-group-arn "$TARGET_TG_ARN" \
+              --query 'length(TargetHealthDescriptions[?TargetHealth.State==`healthy`])' \
+              --output text)
             
             TOTAL_COUNT=$(aws elbv2 describe-target-health \
-              --target-group-arn $TARGET_TG_ARN \
-              --query 'length(TargetHealthDescriptions)' --output text)
+              --target-group-arn "$TARGET_TG_ARN" \
+              --query 'length(TargetHealthDescriptions)' \
+              --output text)
             
-            echo "Health Check $i/20: $HEALTHY_COUNT/$TOTAL_COUNT targets healthy"
+            echo "Health Status: $HEALTHY_COUNT/$TOTAL_COUNT targets healthy"
+            
+            # 타겟 상세 상태 출력
+            echo "📋 Target Health Details:"
+            aws elbv2 describe-target-health \
+              --target-group-arn "$TARGET_TG_ARN" \
+              --query 'TargetHealthDescriptions[].{Target:Target.Id,Port:Target.Port,State:TargetHealth.State,Reason:TargetHealth.Reason}' \
+              --output table
             
             if [ "$HEALTHY_COUNT" -gt 0 ] && [ "$HEALTHY_COUNT" = "$TOTAL_COUNT" ]; then
               echo "✅ All targets are healthy!"
@@ -335,44 +421,134 @@ jobs:
             
             if [ $i -eq 20 ]; then
               echo "❌ Health check timeout - some targets are still unhealthy"
+              echo "🔄 Rolling back traffic routing..."
+              
+              # 롤백: 원래 활성 규칙을 다시 100%로, 비활성 규칙을 0%로
+              ACTIVE_TG_ARN=$(aws elbv2 describe-target-groups \
+                --names "${{ steps.check-tg.outputs.ACTIVE_TG }}" \
+                --query 'TargetGroups[0].TargetGroupArn' \
+                --output text)
+              
+              aws elbv2 modify-rule \
+                --rule-arn "${{ steps.check-tg.outputs.ACTIVE_RULE }}" \
+                --actions Type=forward,ForwardConfig="{
+                  TargetGroups=[
+                    {
+                      TargetGroupArn=$ACTIVE_TG_ARN,
+                      Weight=100
+                    }
+                  ]
+                }"
+              
+              aws elbv2 modify-rule \
+                --rule-arn "${{ steps.check-tg.outputs.INACTIVE_RULE }}" \
+                --actions Type=forward,ForwardConfig="{
+                  TargetGroups=[
+                    {
+                      TargetGroupArn=$TARGET_TG_ARN,
+                      Weight=0
+                    }
+                  ]
+                }"
+              
+              echo "🔄 Traffic rolled back to original configuration"
               exit 1
             fi
             
             sleep 30
           done
 
-      # ALB Listener 규칙 업데이트 (트래픽 전환)
+      # ALB Rule 가중치 업데이트 (트래픽 전환)
       - name: Switch Traffic to New Version
         run: |
-          echo "🔄 Switching traffic to new version..."
+          echo "🔄 Switching traffic to new version using weighted routing..."
           
-          # Target Group ARN 가져오기
-          NEW_TG_ARN=$(aws elbv2 describe-target-groups \
-            --names ${{ steps.check-tg.outputs.INACTIVE_TG }} \
-            --query 'TargetGroups[0].TargetGroupArn' --output text)
+          # 비활성 Target Group ARN 가져오기
+          INACTIVE_TG_ARN=$(aws elbv2 describe-target-groups \
+            --names "${{ steps.check-tg.outputs.INACTIVE_TG }}" \
+            --query 'TargetGroups[0].TargetGroupArn' \
+            --output text)
           
-          # Listener ARN 가져오기
-          LISTENER_ARN=$(aws elbv2 describe-listeners \
-            --load-balancer-arn ${{ steps.check-tg.outputs.ALB_ARN }} \
-            --query 'Listeners[0].ListenerArn' --output text)
+          # 활성 Target Group ARN 가져오기
+          ACTIVE_TG_ARN=$(aws elbv2 describe-target-groups \
+            --names "${{ steps.check-tg.outputs.ACTIVE_TG }}" \
+            --query 'TargetGroups[0].TargetGroupArn' \
+            --output text)
           
-          # Listener의 기본 Action 업데이트
-          aws elbv2 modify-listener \
-            --listener-arn $LISTENER_ARN \
-            --default-actions Type=forward,TargetGroupArn=$NEW_TG_ARN
+          echo "🎯 Inactive Target Group ARN: $INACTIVE_TG_ARN"
+          echo "🎯 Active Target Group ARN: $ACTIVE_TG_ARN"
+          echo "📋 Active Rule: ${{ steps.check-tg.outputs.ACTIVE_RULE }}"
+          echo "📋 Inactive Rule: ${{ steps.check-tg.outputs.INACTIVE_RULE }}"
+          
+          # 1단계: 비활성 규칙을 100%로, 활성 규칙을 0%로 변경
+          echo "🔄 Step 1: Setting inactive rule to 100% weight..."
+          aws elbv2 modify-rule \
+            --rule-arn "${{ steps.check-tg.outputs.INACTIVE_RULE }}" \
+            --actions Type=forward,ForwardConfig="{
+              TargetGroups=[
+                {
+                  TargetGroupArn=$INACTIVE_TG_ARN,
+                  Weight=100
+                }
+              ]
+            }"
+          
+          echo "🔄 Step 2: Setting active rule to 0% weight..."
+          aws elbv2 modify-rule \
+            --rule-arn "${{ steps.check-tg.outputs.ACTIVE_RULE }}" \
+            --actions Type=forward,ForwardConfig="{
+              TargetGroups=[
+                {
+                  TargetGroupArn=$ACTIVE_TG_ARN,
+                  Weight=0
+                }
+              ]
+            }"
           
           echo "✅ Traffic switched to ${{ steps.check-tg.outputs.INACTIVE_TG }}"
+          
+          # 변경사항 확인
+          sleep 5
+          echo "🔍 Verifying traffic switch..."
+          
+          # 비활성 규칙이 100%인지 확인
+          INACTIVE_WEIGHT=$(aws elbv2 describe-rules \
+            --rule-arns "${{ steps.check-tg.outputs.INACTIVE_RULE }}" \
+            --query 'Rules[0].Actions[0].ForwardConfig.TargetGroups[0].Weight' \
+            --output text)
+          
+          # 활성 규칙이 0%인지 확인  
+          ACTIVE_WEIGHT=$(aws elbv2 describe-rules \
+            --rule-arns "${{ steps.check-tg.outputs.ACTIVE_RULE }}" \
+            --query 'Rules[0].Actions[0].ForwardConfig.TargetGroups[0].Weight' \
+            --output text)
+          
+          echo "📊 New weights - Inactive: $INACTIVE_WEIGHT%, Active: $ACTIVE_WEIGHT%"
+          
+          if [ "$INACTIVE_WEIGHT" = "100" ] && [ "$ACTIVE_WEIGHT" = "0" ]; then
+            echo "✅ Traffic switch verified successfully"
+          else
+            echo "❌ Traffic switch verification failed"
+            exit 1
+          fi
 
       # 배포 완료 확인
       - name: Verify Blue/Green Deployment
         run: |
-          echo "🎉 Blue/Green deployment completed successfully!"
+          echo "🎉 Blue/Green weighted deployment completed successfully!"
           echo "📊 Deployment Summary:"
           echo "  - Service: ${{ matrix.service }}"
-          echo "  - Previous Target Group: ${{ steps.check-tg.outputs.ACTIVE_TG }}"
-          echo "  - Current Target Group: ${{ steps.check-tg.outputs.INACTIVE_TG }}"
+          echo "  - Previous Active: ${{ steps.check-tg.outputs.ACTIVE_TG }} (now 0% weight)"
+          echo "  - Current Active: ${{ steps.check-tg.outputs.INACTIVE_TG }} (now 100% weight)" 
           echo "  - New Image: ${{ env.ECR_REGISTRY }}/eatcloud/${{ matrix.service }}:${{ github.sha }}"
           echo "  - Task Definition: ${{ steps.task-def.outputs.NEW_TASK_DEF_ARN }}"
+          echo ""
+          echo "🎯 Traffic Routing:"
+          echo "  - Path: /api/v1/${{ matrix.service }}/*"
+          echo "  - Active Rule: ${{ steps.check-tg.outputs.INACTIVE_RULE }}"
+          echo "  - Inactive Rule: ${{ steps.check-tg.outputs.ACTIVE_RULE }}"
+          echo ""
+          echo "✨ Zero-downtime deployment completed with weighted routing!"
 
   # Production 수동 배포 준비 알림
   production-deploy-ready:
