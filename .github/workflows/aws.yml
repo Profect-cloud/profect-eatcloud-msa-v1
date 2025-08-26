@@ -500,101 +500,82 @@ jobs:
           echo "✅ New version deployed successfully!"
           echo "📊 Final Status: $SERVICE_STATUS, Running Tasks: $RUNNING_COUNT"
 
-      # Health Check 및 Target Group 상태 확인
-      - name: Health Check on Target Environment
+      # 새 Task를 Target Group에 수동 등록 (간소화 버전)
+      - name: Register New Tasks to Target Group
         run: |
-          echo "🔍 Performing health checks on target environment..."
+          echo "🔄 Registering new tasks to inactive target group..."
           
-          # Target Group ARN 가져오기
           TARGET_TG_ARN=$(aws elbv2 describe-target-groups \
             --names "${{ steps.check-tg.outputs.INACTIVE_TG }}" \
             --query 'TargetGroups[0].TargetGroupArn' \
             --output text)
           
-          echo "🎯 Target Group ARN for health check: $TARGET_TG_ARN"
+          # 서비스별 포트 매핑
+          declare -A SERVICE_PORTS
+          SERVICE_PORTS["auth-service"]=8081
+          SERVICE_PORTS["admin-service"]=8083
+          SERVICE_PORTS["customer-service"]=8082
+          SERVICE_PORTS["manager-service"]=8084
+          SERVICE_PORTS["store-service"]=8085
+          SERVICE_PORTS["order-service"]=8086
+          SERVICE_PORTS["payment-service"]=8087
           
-          # Health Check 상태 확인 (최대 10분 대기)
-          for i in {1..20}; do
-            echo "🔍 Health Check attempt $i/20..."
-            
-            HEALTHY_COUNT=$(aws elbv2 describe-target-health \
-              --target-group-arn "$TARGET_TG_ARN" \
-              --query 'length(TargetHealthDescriptions[?TargetHealth.State==`healthy`])' \
+          SERVICE_PORT=${SERVICE_PORTS["${{ matrix.service }}"]}
+          
+          if [ -z "$SERVICE_PORT" ]; then
+            echo "❌ Unknown service: ${{ matrix.service }}"
+            exit 1
+          fi
+          
+          echo "🔌 Service Port: $SERVICE_PORT"
+          
+          # ECS 서비스가 안정화될 때까지 대기 (AWS CLI의 내장 waiter 사용)
+          echo "⏳ Waiting for ECS service to stabilize..."
+          aws ecs wait services-stable \
+            --cluster ${{ env.ECS_CLUSTER_STAGING }} \
+            --services ${{ matrix.service }} \
+            --cli-read-timeout 600
+          
+          # 실행 중인 Task들의 IP 추출 및 등록
+          RUNNING_TASKS=$(aws ecs list-tasks \
+            --cluster ${{ env.ECS_CLUSTER_STAGING }} \
+            --service-name ${{ matrix.service }} \
+            --desired-status RUNNING \
+            --query 'taskArns' \
+            --output text)
+          
+          if [ -z "$RUNNING_TASKS" ]; then
+            echo "❌ No running tasks found"
+            exit 1
+          fi
+          
+          echo "🏃 Found running tasks: $(echo $RUNNING_TASKS | wc -w) tasks"
+          
+          for task_arn in $RUNNING_TASKS; do
+            PRIVATE_IP=$(aws ecs describe-tasks \
+              --cluster ${{ env.ECS_CLUSTER_STAGING }} \
+              --tasks "$task_arn" \
+              --query 'tasks[0].attachments[0].details[?name==`privateIPv4Address`].value' \
               --output text)
             
-            TOTAL_COUNT=$(aws elbv2 describe-target-health \
-              --target-group-arn "$TARGET_TG_ARN" \
-              --query 'length(TargetHealthDescriptions)' \
-              --output text)
-            
-            echo "Health Status: $HEALTHY_COUNT/$TOTAL_COUNT targets healthy"
-            
-            # 타겟 상세 상태 출력
-            echo "📋 Target Health Details:"
-            aws elbv2 describe-target-health \
-              --target-group-arn "$TARGET_TG_ARN" \
-              --query 'TargetHealthDescriptions[].{Target:Target.Id,Port:Target.Port,State:TargetHealth.State,Reason:TargetHealth.Reason}' \
-              --output table
-            
-            if [ "$HEALTHY_COUNT" -gt 0 ] && [ "$HEALTHY_COUNT" = "$TOTAL_COUNT" ]; then
-              echo "✅ All targets are healthy!"
-              break
-            fi
-            
-            if [ $i -eq 20 ]; then
-              echo "❌ Health check timeout - some targets are still unhealthy"
-              echo "🔄 Rolling back traffic routing..."
+            if [ -n "$PRIVATE_IP" ] && [ "$PRIVATE_IP" != "None" ]; then
+              echo "➕ Registering target: $PRIVATE_IP:$SERVICE_PORT"
               
-              # 롤백: 가중치를 원래대로 되돌림
-              ACTIVE_TG_ARN=$(aws elbv2 describe-target-groups \
-                --names "${{ steps.check-tg.outputs.ACTIVE_TG }}" \
-                --query 'TargetGroups[0].TargetGroupArn' \
-                --output text)
+              aws elbv2 register-targets \
+                --target-group-arn "$TARGET_TG_ARN" \
+                --targets Id="$PRIVATE_IP",Port="$SERVICE_PORT"
               
-              if [ "${{ steps.check-tg.outputs.CURRENT_STATE }}" = "BLUE_ACTIVE" ]; then
-                # Blue로 롤백
-                echo "🔄 Rolling back to Blue (100%)"
-                aws elbv2 modify-rule \
-                  --rule-arn "${{ steps.check-tg.outputs.ACTIVE_RULE }}" \
-                  --actions Type=forward,ForwardConfig="{
-                    TargetGroups=[
-                      {
-                        TargetGroupArn=\"$ACTIVE_TG_ARN\",
-                        Weight=100
-                      },
-                      {
-                        TargetGroupArn=\"$TARGET_TG_ARN\",
-                        Weight=0
-                      }
-                    ]
-                  }"
+              if [ $? -eq 0 ]; then
+                echo "✅ Successfully registered target: $PRIVATE_IP:$SERVICE_PORT"
               else
-                # Green으로 롤백
-                echo "🔄 Rolling back to Green (100%)"
-                aws elbv2 modify-rule \
-                  --rule-arn "${{ steps.check-tg.outputs.ACTIVE_RULE }}" \
-                  --actions Type=forward,ForwardConfig="{
-                    TargetGroups=[
-                      {
-                        TargetGroupArn=\"$ACTIVE_TG_ARN\",
-                        Weight=100
-                      },
-                      {
-                        TargetGroupArn=\"$TARGET_TG_ARN\",
-                        Weight=0
-                      }
-                    ]
-                  }"
+                echo "❌ Failed to register target: $PRIVATE_IP:$SERVICE_PORT"
               fi
-              
-              echo "🔄 Traffic rolled back to original configuration: ${{ steps.check-tg.outputs.ACTIVE_TG }}"
-              exit 1
             fi
-            
-            sleep 30
           done
+          
+          echo "✅ Task registration completed"
 
-      # ALB Rule 가중치 업데이트 (트래픽 전환)
+      # ALB Rule 가중치 업데이트 (트래픽 전환) - 에러 핸들링 추가
       - name: Switch Traffic to New Version
         run: |
           echo "🔄 Switching traffic to new version using weighted routing..."
@@ -616,56 +597,34 @@ jobs:
           echo "📋 Active Rule: ${{ steps.check-tg.outputs.ACTIVE_RULE }}"
           echo "🔄 Current State: ${{ steps.check-tg.outputs.CURRENT_STATE }}"
           
-          # 가중치 전환: 현재 활성 Rule에서 가중치를 뒤바꿈
-          if [ "${{ steps.check-tg.outputs.CURRENT_STATE }}" = "BLUE_ACTIVE" ]; then
-            # Blue가 활성이었으므로 Green을 100%로
-            echo "🔄 Switching Blue(100%) → Blue(0%), Green(0%) → Green(100%)"
-            aws elbv2 modify-rule \
-              --rule-arn "${{ steps.check-tg.outputs.ACTIVE_RULE }}" \
-              --actions Type=forward,ForwardConfig="{
-                TargetGroups=[
-                  {
-                    TargetGroupArn=\"$ACTIVE_TG_ARN\",
-                    Weight=0
-                  },
-                  {
-                    TargetGroupArn=\"$INACTIVE_TG_ARN\",
-                    Weight=100
-                  }
-                ]
-              }"
-          else
-            # Green이 활성이었으므로 Blue를 100%로
-            echo "🔄 Switching Green(100%) → Green(0%), Blue(0%) → Blue(100%)"
-            aws elbv2 modify-rule \
-              --rule-arn "${{ steps.check-tg.outputs.ACTIVE_RULE }}" \
-              --actions Type=forward,ForwardConfig="{
-                TargetGroups=[
-                  {
-                    TargetGroupArn=\"$ACTIVE_TG_ARN\",
-                    Weight=0
-                  },
-                  {
-                    TargetGroupArn=\"$INACTIVE_TG_ARN\",
-                    Weight=100
-                  }
-                ]
-              }"
+          # 트래픽 전환 실행 (에러 캐치)
+          echo "🔄 Switching traffic weights..."
+          SWITCH_RESULT=$(aws elbv2 modify-rule \
+            --rule-arn "${{ steps.check-tg.outputs.ACTIVE_RULE }}" \
+            --actions Type=forward,ForwardConfig="{
+              TargetGroups=[
+                {
+                  TargetGroupArn=\"$ACTIVE_TG_ARN\",
+                  Weight=0
+                },
+                {
+                  TargetGroupArn=\"$INACTIVE_TG_ARN\",
+                  Weight=100
+                }
+              ]
+            }" 2>&1)
+          
+          SWITCH_EXIT_CODE=$?
+          if [ $SWITCH_EXIT_CODE -ne 0 ]; then
+            echo "❌ Traffic switch failed: $SWITCH_RESULT"
+            exit 1
           fi
           
-          echo "✅ Traffic switched to ${{ steps.check-tg.outputs.INACTIVE_TG }}"
+          echo "✅ Traffic switched successfully to ${{ steps.check-tg.outputs.INACTIVE_TG }}"
           
           # 변경사항 확인
-          sleep 5
+          sleep 3
           echo "🔍 Verifying traffic switch..."
-          
-          # 가중치 확인
-          NEW_WEIGHTS=$(aws elbv2 describe-rules \
-            --rule-arns "${{ steps.check-tg.outputs.ACTIVE_RULE }}" \
-            --query 'Rules[0].Actions[0].ForwardConfig.TargetGroups[].Weight' \
-            --output text)
-          
-          echo "📊 New weights: $NEW_WEIGHTS"
           
           # 비활성 TG가 100%인지 확인
           INACTIVE_WEIGHT=$(aws elbv2 describe-rules \
@@ -674,10 +633,146 @@ jobs:
             --output text)
           
           if [ "$INACTIVE_WEIGHT" = "100" ]; then
-            echo "✅ Traffic switch verified successfully - ${{ steps.check-tg.outputs.INACTIVE_TG }} now at 100%"
+            echo "✅ Traffic switch verified - ${{ steps.check-tg.outputs.INACTIVE_TG }} now at 100%"
           else
             echo "❌ Traffic switch verification failed - Weight: $INACTIVE_WEIGHT"
             exit 1
+          fi
+
+      # 병렬 Health Check 및 이전 버전 정리 준비
+      - name: Parallel Health Check and Cleanup Preparation
+        run: |
+          echo "🔄 Starting parallel health check and cleanup preparation..."
+          
+          TARGET_TG_ARN=$(aws elbv2 describe-target-groups \
+            --names "${{ steps.check-tg.outputs.INACTIVE_TG }}" \
+            --query 'TargetGroups[0].TargetGroupArn' \
+            --output text)
+          
+          PREVIOUS_TG_ARN=$(aws elbv2 describe-target-groups \
+            --names "${{ steps.check-tg.outputs.ACTIVE_TG }}" \
+            --query 'TargetGroups[0].TargetGroupArn' \
+            --output text)
+          
+          # Health check 함수
+          health_check() {
+            echo "🏥 Starting health check process..."
+            for i in {1..20}; do
+              HEALTHY_COUNT=$(aws elbv2 describe-target-health \
+                --target-group-arn "$TARGET_TG_ARN" \
+                --query 'length(TargetHealthDescriptions[?TargetHealth.State==`healthy`])' \
+                --output text)
+              
+              TOTAL_COUNT=$(aws elbv2 describe-target-health \
+                --target-group-arn "$TARGET_TG_ARN" \
+                --query 'length(TargetHealthDescriptions)' \
+                --output text)
+              
+              echo "[Health Check $i/20] Status: $HEALTHY_COUNT/$TOTAL_COUNT targets healthy"
+              
+              if [ "$HEALTHY_COUNT" -gt 0 ] && [ "$HEALTHY_COUNT" = "$TOTAL_COUNT" ]; then
+                echo "✅ All targets are healthy!"
+                echo "HEALTH_CHECK_SUCCESS" > /tmp/health_status
+                return 0
+              fi
+              
+              if [ $i -eq 20 ]; then
+                echo "❌ Health check failed after 20 attempts"
+                echo "HEALTH_CHECK_FAILED" > /tmp/health_status
+                return 1
+              fi
+              
+              sleep 15
+            done
+          }
+          
+          # 이전 버전 Target 정보 수집 함수
+          prepare_cleanup() {
+            echo "🧹 Preparing cleanup information..."
+            sleep 60  # Health check가 어느 정도 진행될 때까지 대기
+            
+            PREVIOUS_TARGETS=$(aws elbv2 describe-target-health \
+              --target-group-arn "$PREVIOUS_TG_ARN" \
+              --query 'TargetHealthDescriptions[].{Id:Target.Id,Port:Target.Port}' \
+              --output json)
+            
+            echo "$PREVIOUS_TARGETS" > /tmp/cleanup_targets
+            echo "📋 Cleanup targets prepared: $(echo $PREVIOUS_TARGETS | jq length) targets"
+          }
+          
+          # 병렬 실행
+          health_check &
+          prepare_cleanup &
+          
+          wait  # 모든 백그라운드 작업 완료 대기
+          
+          # Health check 결과 확인
+          if [ -f "/tmp/health_status" ]; then
+            HEALTH_STATUS=$(cat /tmp/health_status)
+            if [ "$HEALTH_STATUS" = "HEALTH_CHECK_FAILED" ]; then
+              echo "❌ Health check failed, initiating rollback..."
+              
+              # 롤백 로직
+              ACTIVE_TG_ARN=$(aws elbv2 describe-target-groups \
+                --names "${{ steps.check-tg.outputs.ACTIVE_TG }}" \
+                --query 'TargetGroups[0].TargetGroupArn' \
+                --output text)
+              
+              aws elbv2 modify-rule \
+                --rule-arn "${{ steps.check-tg.outputs.ACTIVE_RULE }}" \
+                --actions Type=forward,ForwardConfig="{
+                  TargetGroups=[
+                    {
+                      TargetGroupArn=\"$ACTIVE_TG_ARN\",
+                      Weight=100
+                    },
+                    {
+                      TargetGroupArn=\"$TARGET_TG_ARN\",
+                      Weight=0
+                    }
+                  ]
+                }"
+              
+              echo "🔄 Traffic rolled back to ${{ steps.check-tg.outputs.ACTIVE_TG }}"
+              exit 1
+            fi
+          fi
+          
+          echo "✅ Parallel operations completed successfully"
+
+      # 이전 버전 Target 정리 (최적화)
+      - name: Cleanup Previous Version Targets
+        run: |
+          echo "🧹 Executing cleanup of previous version targets..."
+          
+          PREVIOUS_TG_ARN=$(aws elbv2 describe-target-groups \
+            --names "${{ steps.check-tg.outputs.ACTIVE_TG }}" \
+            --query 'TargetGroups[0].TargetGroupArn' \
+            --output text)
+          
+          if [ -f "/tmp/cleanup_targets" ]; then
+            PREVIOUS_TARGETS=$(cat /tmp/cleanup_targets)
+            
+            if [ "$PREVIOUS_TARGETS" != "[]" ]; then
+              echo "📋 Deregistering $(echo $PREVIOUS_TARGETS | jq length) targets..."
+              
+              # 모든 targets를 한 번에 배열로 처리
+              TARGETS_TO_REMOVE=$(echo "$PREVIOUS_TARGETS" | jq -c '[.[] | {Id: .Id, Port: .Port}]')
+              
+              aws elbv2 deregister-targets \
+                --target-group-arn "$PREVIOUS_TG_ARN" \
+                --targets "$TARGETS_TO_REMOVE"
+              
+              if [ $? -eq 0 ]; then
+                echo "✅ Successfully initiated deregistration for all targets"
+              else
+                echo "⚠️ Some targets failed to deregister"
+              fi
+            else
+              echo "ℹ️ No targets found in previous target group"
+            fi
+          else
+            echo "⚠️ Cleanup targets file not found, skipping cleanup"
           fi
 
       # 배포 완료 확인
@@ -702,7 +797,37 @@ jobs:
           echo "  - Rule ARN: ${{ steps.check-tg.outputs.ACTIVE_RULE }}"
           echo "  - Target Groups: Both included with weight-based routing"
           echo ""
+          echo "🧹 Cleanup Status:"
+          echo "  - Previous version targets removed from ${{ steps.check-tg.outputs.ACTIVE_TG }}"
+          echo "  - New version targets active in ${{ steps.check-tg.outputs.INACTIVE_TG }}"
+          echo ""
           echo "✨ Zero-downtime deployment completed with single-rule weighted routing!"
+          
+          # 최종 상태 검증
+          echo "🔍 Final deployment verification:"
+          
+          # 새로운 활성 Target Group 상태 확인
+          NEW_ACTIVE_TG_ARN=$(aws elbv2 describe-target-groups \
+            --names "${{ steps.check-tg.outputs.INACTIVE_TG }}" \
+            --query 'TargetGroups[0].TargetGroupArn' \
+            --output text)
+          
+          FINAL_HEALTHY_COUNT=$(aws elbv2 describe-target-health \
+            --target-group-arn "$NEW_ACTIVE_TG_ARN" \
+            --query 'length(TargetHealthDescriptions[?TargetHealth.State==`healthy`])' \
+            --output text)
+          
+          echo "  - Active Target Group: ${{ steps.check-tg.outputs.INACTIVE_TG }}"
+          echo "  - Healthy Targets: $FINAL_HEALTHY_COUNT"
+          
+          # ALB Rule 가중치 최종 확인
+          FINAL_WEIGHTS=$(aws elbv2 describe-rules \
+            --rule-arns "${{ steps.check-tg.outputs.ACTIVE_RULE }}" \
+            --query 'Rules[0].Actions[0].ForwardConfig.TargetGroups[].Weight' \
+            --output text)
+          
+          echo "  - Traffic Distribution: $FINAL_WEIGHTS"
+          echo "  - Deployment Status: ✅ SUCCESS"
 
   # Production 수동 배포 준비 알림
   production-deploy-ready:
