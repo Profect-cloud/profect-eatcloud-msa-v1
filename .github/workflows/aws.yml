@@ -338,9 +338,21 @@ jobs:
       - name: Update Task Definition and Deploy to Inactive Environment
         id: task-def
         run: |
-          # 현재 Task Definition 가져오기
+          # 현재 Task Definition 가져오기 (-staging 접미사 제거)
+          TASK_DEF_NAME="eatcloud-${{ matrix.service }}"
+          
+          echo "🔍 Looking for task definition: $TASK_DEF_NAME"
+          
+          # Task Definition이 존재하는지 확인
+          if ! aws ecs describe-task-definition --task-definition "$TASK_DEF_NAME" > /dev/null 2>&1; then
+            echo "❌ Task definition '$TASK_DEF_NAME' not found!"
+            echo "📋 Available task definitions for this service:"
+            aws ecs list-task-definitions --family-prefix "eatcloud-${{ matrix.service }}" --query 'taskDefinitionArns' --output text
+            exit 1
+          fi
+          
           TASK_DEF=$(aws ecs describe-task-definition \
-            --task-definition eatcloud-${{ matrix.service }}-staging \
+            --task-definition "$TASK_DEF_NAME" \
             --query 'taskDefinition' \
             --output json)
           
