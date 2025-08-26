@@ -111,6 +111,9 @@ dependencies {
 
     implementation project(":auto-response")
     implementation project(":auto-time")
+    
+    // Apache Commons Math for vector calculations
+    implementation 'org.apache.commons:commons-math3:3.6.1'
 
 }
 

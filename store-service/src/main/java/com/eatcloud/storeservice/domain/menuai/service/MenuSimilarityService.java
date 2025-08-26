@@ -5,6 +5,8 @@ import com.eatcloud.storeservice.domain.menuai.entity.MenuVector;
 import com.eatcloud.storeservice.domain.menuai.repository.MenuVectorRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.math3.linear.ArrayRealVector;
+import org.apache.commons.math3.linear.RealVector;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -144,7 +146,69 @@ public class MenuSimilarityService {
 	}
 
 	/**
-	 * 코사인 유사도 계산
+	 * 개선된 유사도 계산 (RealVector 기반)
+	 */
+	private double calculateEnhancedSimilarity(Map<String, Double> vector1, Map<String, Double> vector2) {
+		// 1. RealVector 기반 코사인 유사도
+		double cosineSimilarity = calculateCosineSimilarityWithRealVector(vector1, vector2);
+		
+		// 2. 부분 단어 매칭 점수
+		double partialMatchScore = calculatePartialMatchScore(vector1, vector2);
+		
+		// 가중 평균으로 최종 유사도 계산
+		double finalSimilarity = (cosineSimilarity * 0.6) + (partialMatchScore * 0.4);
+		
+		return Math.round(finalSimilarity * 1000.0) / 1000.0; // 소수점 3자리
+	}
+
+	/**
+	 * RealVector를 사용한 코사인 유사도 계산
+	 */
+	private double calculateCosineSimilarityWithRealVector(Map<String, Double> vector1, Map<String, Double> vector2) {
+		if (vector1.isEmpty() || vector2.isEmpty()) {
+			return 0.0;
+		}
+
+		try {
+			// 모든 고유한 단어들 수집
+			Set<String> allTerms = new HashSet<>();
+			allTerms.addAll(vector1.keySet());
+			allTerms.addAll(vector2.keySet());
+
+			// RealVector 생성
+			RealVector v1 = new ArrayRealVector(allTerms.size());
+			RealVector v2 = new ArrayRealVector(allTerms.size());
+
+			// 벡터 값 설정
+			int index = 0;
+			for (String term : allTerms) {
+				double val1 = vector1.getOrDefault(term, 0.0);
+				double val2 = vector2.getOrDefault(term, 0.0);
+				
+				v1.setEntry(index, val1);
+				v2.setEntry(index, val2);
+				index++;
+			}
+
+			// 코사인 유사도 계산
+			double dotProduct = v1.dotProduct(v2);
+			double norm1 = v1.getNorm();
+			double norm2 = v2.getNorm();
+
+			if (norm1 == 0.0 || norm2 == 0.0) {
+				return 0.0;
+			}
+
+			return dotProduct / (norm1 * norm2);
+			
+		} catch (Exception e) {
+			log.warn("RealVector 코사인 유사도 계산 실패, 기본 방식으로 대체", e);
+			return calculateCosineSimilarity(vector1, vector2);
+		}
+	}
+
+	/**
+	 * 기존 코사인 유사도 계산 (백업용)
 	 */
 	private double calculateCosineSimilarity(Map<String, Double> vector1, Map<String, Double> vector2) {
 		if (vector1.isEmpty() || vector2.isEmpty()) {
@@ -174,22 +238,6 @@ public class MenuSimilarityService {
 		}
 
 		return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));
-	}
-
-	/**
-	 * 개선된 유사도 계산 (부분 단어 매칭 + 코사인 유사도)
-	 */
-	private double calculateEnhancedSimilarity(Map<String, Double> vector1, Map<String, Double> vector2) {
-		// 1. 코사인 유사도
-		double cosineSimilarity = calculateCosineSimilarity(vector1, vector2);
-		
-		// 2. 부분 단어 매칭 점수
-		double partialMatchScore = calculatePartialMatchScore(vector1, vector2);
-		
-		// 가중 평균으로 최종 유사도 계산 (카테고리 유사도 제거)
-		double finalSimilarity = (cosineSimilarity * 0.6) + (partialMatchScore * 0.4);
-		
-		return Math.round(finalSimilarity * 1000.0) / 1000.0; // 소수점 3자리
 	}
 
 	/**
