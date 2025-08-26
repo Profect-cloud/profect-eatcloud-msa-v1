@@ -1,8 +1,8 @@
 package com.eatcloud.storeservice.domain.reviews.service;
 
+import com.eatcloud.storeservice.domain.reviews.client.OrdersReviewClient;
 import com.eatcloud.storeservice.domain.reviews.dto.*;
 import com.eatcloud.storeservice.domain.reviews.util.SortWhitelist;
-import com.eatcloud.storeservice.reviews.client.OrdersReviewClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
