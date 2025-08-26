@@ -55,6 +55,26 @@ public class StoreController {
 		return ApiResponse.success(storeService.searchStoresByKeyword(req));
 	}
 
+//	@Operation(summary = "0. 전체 매장 조회(페이지네이션)")
+//	@GetMapping
+//	public ApiResponse<Page<StoreSearchResponseDto>> listStores(
+//			@RequestParam(defaultValue = "0") int page,
+//			@RequestParam(defaultValue = "20") int size,
+//			@RequestParam(defaultValue = "createdAt,desc") String sort
+//	) {
+//		// sort 파싱: "field,direction"
+//		String[] parts = sort.split(",", 2);
+//		String sortField = parts[0];
+//		String direction = (parts.length > 1 ? parts[1] : "desc");
+//
+//		if (size > 100) size = 100; // 과도한 조회 방지 (권장)
+//
+//		Page<StoreSearchResponseDto> result =
+//				storeService.listStores(page, size, sortField, direction);
+//
+//		return ApiResponse.success(result);
+//	}
+
 	// 키워드 검색
 	// 필터 정렬
 }

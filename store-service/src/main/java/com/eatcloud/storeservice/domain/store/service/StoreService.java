@@ -70,4 +70,5 @@ public class StoreService {
         return storeRepository.searchByKeywordAndCategory(req, pageable);
     }
 
+
 }

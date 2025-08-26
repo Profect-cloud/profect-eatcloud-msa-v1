@@ -28,10 +28,8 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                // 게이트웨이 stripPrefix(2) 이후 백엔드가 받는 경로에 맞춰 허용
-                                "/admin/**",          // ✅ /api/v1/admin/** 가 아님
-                                "/stores/**",         // ✅ 필요시
-                                "/internal/**",       // ✅ 앞에 / 필요
+                                "/api/v1/admin/**",
+                                "/internal/**",
                                 "/actuator/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
