@@ -191,8 +191,8 @@ jobs:
         run: |
           aws ecr start-image-scan --repository-name eatcloud/${{ matrix.service }} --image-id imageTag=latest || true
 
-  # Staging 자동 배포 (develop 브랜치)
-  deploy-staging:
+  # Staging Blue/Green 배포 (develop 브랜치)
+  deploy-staging-blue-green:
     needs: [detect-changes, build-and-push-ecr]
     if: needs.detect-changes.outputs.has_changes == 'true' && github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
@@ -211,22 +211,168 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Deploy to ECS Staging
+      # 현재 활성 Target Group 확인
+      - name: Check Current Active Target Group
+        id: check-tg
         run: |
-          # ECS 서비스 강제 새 배포
+          # ALB Listener Rules를 확인하여 현재 활성 TG 파악
+          BLUE_TG="${{ matrix.service }}-tg"
+          GREEN_TG="${{ matrix.service }}-greentg"
+          
+          # ALB ARN 가져오기 (서비스별로 다를 수 있음)
+          ALB_ARN=$(aws elbv2 describe-load-balancers \
+            --query "LoadBalancers[?contains(LoadBalancerName, 'eatcloud')].LoadBalancerArn" \
+            --output text)
+          
+          # 현재 활성 TG 확인 (첫 번째 Listener의 기본 Action 기준)
+          CURRENT_TG=$(aws elbv2 describe-listeners \
+            --load-balancer-arn $ALB_ARN \
+            --query "Listeners[0].DefaultActions[0].TargetGroupArn" --output text)
+          
+          CURRENT_TG_NAME=$(aws elbv2 describe-target-groups \
+            --target-group-arns $CURRENT_TG \
+            --query "TargetGroups[0].TargetGroupName" --output text)
+          
+          if [[ "$CURRENT_TG_NAME" == "$BLUE_TG" ]]; then
+            TARGET_TG="$GREEN_TG"
+            INACTIVE_TG="$GREEN_TG"
+            ACTIVE_TG="$BLUE_TG"
+            echo "🔵 Current: Blue ($BLUE_TG) → Deploying to: Green ($GREEN_TG)"
+          else
+            TARGET_TG="$BLUE_TG" 
+            INACTIVE_TG="$BLUE_TG"
+            ACTIVE_TG="$GREEN_TG"
+            echo "🟢 Current: Green ($GREEN_TG) → Deploying to: Blue ($BLUE_TG)"
+          fi
+          
+          echo "TARGET_TG=$TARGET_TG" >> $GITHUB_OUTPUT
+          echo "INACTIVE_TG=$INACTIVE_TG" >> $GITHUB_OUTPUT
+          echo "ACTIVE_TG=$ACTIVE_TG" >> $GITHUB_OUTPUT
+          echo "ALB_ARN=$ALB_ARN" >> $GITHUB_OUTPUT
+
+      # 새 Task Definition 생성 및 비활성 환경 업데이트
+      - name: Update Task Definition and Deploy to Inactive Environment
+        id: task-def
+        run: |
+          # 현재 Task Definition 가져오기
+          TASK_DEF=$(aws ecs describe-task-definition \
+            --task-definition eatcloud-${{ matrix.service }}-staging \
+            --query 'taskDefinition' \
+            --output json)
+          
+          # 새 이미지 URI로 Task Definition 업데이트
+          NEW_IMAGE="${{ env.ECR_REGISTRY }}/eatcloud/${{ matrix.service }}:${{ github.sha }}"
+          
+          echo $TASK_DEF | jq --arg IMAGE "$NEW_IMAGE" \
+            '.containerDefinitions[0].image = $IMAGE | 
+             del(.taskDefinitionArn) | del(.revision) | del(.status) | 
+             del(.requiresAttributes) | del(.placementConstraints) | 
+             del(.compatibilities) | del(.registeredAt) | del(.registeredBy)' > new-task-def.json
+          
+          # 새 Task Definition 등록
+          NEW_TASK_DEF_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://new-task-def.json \
+            --query 'taskDefinition.taskDefinitionArn' --output text)
+          
+          echo "NEW_TASK_DEF_ARN=$NEW_TASK_DEF_ARN" >> $GITHUB_OUTPUT
+          echo "📋 New Task Definition: $NEW_TASK_DEF_ARN"
+          
+          # ECS 서비스 업데이트 (비활성 Target Group으로)
           aws ecs update-service \
             --cluster ${{ env.ECS_CLUSTER_STAGING }} \
             --service ${{ matrix.service }} \
-            --force-new-deployment \
-            --query 'service.{ServiceName:serviceName,Status:status,TaskDefinition:taskDefinition}'
+            --task-definition $NEW_TASK_DEF_ARN \
+            --force-new-deployment
 
-      - name: Wait for deployment to complete
+      # 배포 완료 대기
+      - name: Wait for New Version Deployment
         run: |
+          echo "⏳ Waiting for new version to be deployed..."
+          
           aws ecs wait services-stable \
             --cluster ${{ env.ECS_CLUSTER_STAGING }} \
             --services ${{ matrix.service }}
           
-          echo "✅ ${{ matrix.service }} staging deployment completed"
+          # 서비스 상태 확인
+          SERVICE_STATUS=$(aws ecs describe-services \
+            --cluster ${{ env.ECS_CLUSTER_STAGING }} \
+            --services ${{ matrix.service }} \
+            --query 'services[0].status' --output text)
+          
+          RUNNING_COUNT=$(aws ecs describe-services \
+            --cluster ${{ env.ECS_CLUSTER_STAGING }} \
+            --services ${{ matrix.service }} \
+            --query 'services[0].runningCount' --output text)
+          
+          echo "✅ New version deployed - Service Status: $SERVICE_STATUS, Running Tasks: $RUNNING_COUNT"
+
+      # Health Check 및 Target Group 상태 확인
+      - name: Health Check on Inactive Target Group
+        run: |
+          echo "🔍 Performing health checks on inactive environment..."
+          
+          # Target Group ARN 가져오기
+          TARGET_TG_ARN=$(aws elbv2 describe-target-groups \
+            --names ${{ steps.check-tg.outputs.INACTIVE_TG }} \
+            --query 'TargetGroups[0].TargetGroupArn' --output text)
+          
+          # Health Check 상태 확인 (최대 10분 대기)
+          for i in {1..20}; do
+            HEALTHY_COUNT=$(aws elbv2 describe-target-health \
+              --target-group-arn $TARGET_TG_ARN \
+              --query 'length(TargetHealthDescriptions[?TargetHealth.State==`healthy`])' --output text)
+            
+            TOTAL_COUNT=$(aws elbv2 describe-target-health \
+              --target-group-arn $TARGET_TG_ARN \
+              --query 'length(TargetHealthDescriptions)' --output text)
+            
+            echo "Health Check $i/20: $HEALTHY_COUNT/$TOTAL_COUNT targets healthy"
+            
+            if [ "$HEALTHY_COUNT" -gt 0 ] && [ "$HEALTHY_COUNT" = "$TOTAL_COUNT" ]; then
+              echo "✅ All targets are healthy!"
+              break
+            fi
+            
+            if [ $i -eq 20 ]; then
+              echo "❌ Health check timeout - some targets are still unhealthy"
+              exit 1
+            fi
+            
+            sleep 30
+          done
+
+      # ALB Listener 규칙 업데이트 (트래픽 전환)
+      - name: Switch Traffic to New Version
+        run: |
+          echo "🔄 Switching traffic to new version..."
+          
+          # Target Group ARN 가져오기
+          NEW_TG_ARN=$(aws elbv2 describe-target-groups \
+            --names ${{ steps.check-tg.outputs.INACTIVE_TG }} \
+            --query 'TargetGroups[0].TargetGroupArn' --output text)
+          
+          # Listener ARN 가져오기
+          LISTENER_ARN=$(aws elbv2 describe-listeners \
+            --load-balancer-arn ${{ steps.check-tg.outputs.ALB_ARN }} \
+            --query 'Listeners[0].ListenerArn' --output text)
+          
+          # Listener의 기본 Action 업데이트
+          aws elbv2 modify-listener \
+            --listener-arn $LISTENER_ARN \
+            --default-actions Type=forward,TargetGroupArn=$NEW_TG_ARN
+          
+          echo "✅ Traffic switched to ${{ steps.check-tg.outputs.INACTIVE_TG }}"
+
+      # 배포 완료 확인
+      - name: Verify Blue/Green Deployment
+        run: |
+          echo "🎉 Blue/Green deployment completed successfully!"
+          echo "📊 Deployment Summary:"
+          echo "  - Service: ${{ matrix.service }}"
+          echo "  - Previous Target Group: ${{ steps.check-tg.outputs.ACTIVE_TG }}"
+          echo "  - Current Target Group: ${{ steps.check-tg.outputs.INACTIVE_TG }}"
+          echo "  - New Image: ${{ env.ECR_REGISTRY }}/eatcloud/${{ matrix.service }}:${{ github.sha }}"
+          echo "  - Task Definition: ${{ steps.task-def.outputs.NEW_TASK_DEF_ARN }}"
 
   # Production 수동 배포 준비 알림
   production-deploy-ready:
@@ -235,9 +381,9 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Production deployment notification
+      - name: Production Blue/Green deployment notification
         run: |
-          echo "🚀 Production deployment ready!"
+          echo "🚀 Production Blue/Green deployment ready!"
           echo "Services: ${{ needs.detect-changes.outputs.services }}"
           echo "Image SHA: ${{ github.sha }}"
           echo "ECR Images:"
@@ -245,7 +391,18 @@ jobs:
             echo "  - ${{ env.ECR_REGISTRY }}/eatcloud/${service}:${{ github.sha }}"
           done
           echo ""
+          echo "Blue/Green deployment features:"
+          echo "  ✅ Zero-downtime deployment"
+          echo "  ✅ Automatic health checks"
+          echo "  ✅ Traffic switching with ALB Target Groups"  
+          echo "  ✅ Instant rollback capability"
+          echo ""
+          echo "Target Groups per service:"
+          echo "${{ needs.detect-changes.outputs.services }}" | jq -r '.[]' | while read service; do
+            echo "  - ${service}: Blue (${service}-tg) ↔ Green (${service}-greentg)"
+          done
+          echo ""
           echo "To deploy to production:"
           echo "1. Go to Actions tab"
-          echo "2. Run 'Deploy to Production (ECR + ECS)' workflow"
+          echo "2. Run 'Deploy to Production (Blue/Green)' workflow"
           echo "3. Select services and image tag: ${{ github.sha }}"
