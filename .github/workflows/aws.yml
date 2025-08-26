@@ -380,16 +380,113 @@ jobs:
             --task-definition $NEW_TASK_DEF_ARN \
             --force-new-deployment
 
-      # 배포 완료 대기
+      # 배포 완료 대기 (개선된 버전)
       - name: Wait for New Version Deployment
         run: |
           echo "⏳ Waiting for new version to be deployed..."
           
-          aws ecs wait services-stable \
-            --cluster ${{ env.ECS_CLUSTER_STAGING }} \
-            --services ${{ matrix.service }}
+          # 타임아웃 설정 (최대 10분)
+          TIMEOUT=600
+          ELAPSED=0
+          INTERVAL=30
           
-          # 서비스 상태 확인
+          while [ $ELAPSED -lt $TIMEOUT ]; do
+            echo "🔍 Checking service status... (${ELAPSED}s/${TIMEOUT}s)"
+            
+            # 서비스 상태 확인
+            SERVICE_INFO=$(aws ecs describe-services \
+              --cluster ${{ env.ECS_CLUSTER_STAGING }} \
+              --services ${{ matrix.service }} \
+              --query 'services[0].{Status:status,RunningCount:runningCount,PendingCount:pendingCount,DesiredCount:desiredCount,TaskDefinition:taskDefinition}' \
+              --output json)
+            
+            STATUS=$(echo "$SERVICE_INFO" | jq -r '.Status')
+            RUNNING_COUNT=$(echo "$SERVICE_INFO" | jq -r '.RunningCount')
+            PENDING_COUNT=$(echo "$SERVICE_INFO" | jq -r '.PendingCount')
+            DESIRED_COUNT=$(echo "$SERVICE_INFO" | jq -r '.DesiredCount')
+            
+            echo "📊 Service Status: $STATUS, Running: $RUNNING_COUNT/$DESIRED_COUNT, Pending: $PENDING_COUNT"
+            
+            # 최근 서비스 이벤트 확인
+            RECENT_EVENTS=$(aws ecs describe-services \
+              --cluster ${{ env.ECS_CLUSTER_STAGING }} \
+              --services ${{ matrix.service }} \
+              --query 'services[0].events[0:3].{CreatedAt:createdAt,Message:message}' \
+              --output json)
+            
+            echo "📝 Recent Events:"
+            echo "$RECENT_EVENTS" | jq -r '.[] | "\(.CreatedAt): \(.Message)"'
+            
+            # 태스크 상태 확인
+            TASK_ARNS=$(aws ecs list-tasks \
+              --cluster ${{ env.ECS_CLUSTER_STAGING }} \
+              --service-name ${{ matrix.service }} \
+              --query 'taskArns' \
+              --output text)
+            
+            if [ -n "$TASK_ARNS" ]; then
+              TASK_STATUS=$(aws ecs describe-tasks \
+                --cluster ${{ env.ECS_CLUSTER_STAGING }} \
+                --tasks $TASK_ARNS \
+                --query 'tasks[].{TaskArn:taskArn,LastStatus:lastStatus,HealthStatus:healthStatus}' \
+                --output json)
+              
+              echo "🏃 Task Status:"
+              echo "$TASK_STATUS" | jq -r '.[] | "Task: \(.TaskArn | split("/")[2]), Status: \(.LastStatus), Health: \(.HealthStatus // "N/A")"'
+              
+              # 컨테이너 상태 확인
+              CONTAINER_STATUS=$(aws ecs describe-tasks \
+                --cluster ${{ env.ECS_CLUSTER_STAGING }} \
+                --tasks $TASK_ARNS \
+                --query 'tasks[].containers[].{Name:name,LastStatus:lastStatus,ExitCode:exitCode,Reason:reason}' \
+                --output json)
+              
+              echo "🐳 Container Status:"
+              echo "$CONTAINER_STATUS" | jq -r '.[] | "Container: \(.Name), Status: \(.LastStatus), Exit Code: \(.ExitCode // "N/A"), Reason: \(.Reason // "N/A")"'
+              
+              # 실패한 태스크가 있는지 확인
+              FAILED_TASKS=$(echo "$TASK_STATUS" | jq -r '.[] | select(.LastStatus == "STOPPED") | .TaskArn')
+              if [ -n "$FAILED_TASKS" ]; then
+                echo "❌ Found failed tasks, checking stop reason:"
+                for task_arn in $FAILED_TASKS; do
+                  STOP_REASON=$(aws ecs describe-tasks \
+                    --cluster ${{ env.ECS_CLUSTER_STAGING }} \
+                    --tasks "$task_arn" \
+                    --query 'tasks[0].stopReason' \
+                    --output text)
+                  echo "Task $task_arn stopped: $STOP_REASON"
+                done
+              fi
+            fi
+            
+            # 안정 상태 확인
+            if [ "$STATUS" = "ACTIVE" ] && [ "$RUNNING_COUNT" = "$DESIRED_COUNT" ] && [ "$PENDING_COUNT" = "0" ]; then
+              echo "✅ Service is stable!"
+              break
+            fi
+            
+            # 배포 실패 조건 확인
+            if [ "$STATUS" != "ACTIVE" ]; then
+              echo "❌ Service status is not ACTIVE: $STATUS"
+              exit 1
+            fi
+            
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
+          done
+          
+          if [ $ELAPSED -ge $TIMEOUT ]; then
+            echo "❌ Deployment timeout after ${TIMEOUT}s"
+            echo "🔍 Final service state:"
+            aws ecs describe-services \
+              --cluster ${{ env.ECS_CLUSTER_STAGING }} \
+              --services ${{ matrix.service }} \
+              --query 'services[0].{Status:status,RunningCount:runningCount,PendingCount:pendingCount,DesiredCount:desiredCount}' \
+              --output table
+            exit 1
+          fi
+          
+          # 최종 상태 확인
           SERVICE_STATUS=$(aws ecs describe-services \
             --cluster ${{ env.ECS_CLUSTER_STAGING }} \
             --services ${{ matrix.service }} \
@@ -400,7 +497,8 @@ jobs:
             --services ${{ matrix.service }} \
             --query 'services[0].runningCount' --output text)
           
-          echo "✅ New version deployed - Service Status: $SERVICE_STATUS, Running Tasks: $RUNNING_COUNT"
+          echo "✅ New version deployed successfully!"
+          echo "📊 Final Status: $SERVICE_STATUS, Running Tasks: $RUNNING_COUNT"
 
       # Health Check 및 Target Group 상태 확인
       - name: Health Check on Target Environment
