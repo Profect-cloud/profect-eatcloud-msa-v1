@@ -1,4 +1,4 @@
-package com.eatcloud.storeservice.reviews.client;
+package com.eatcloud.storeservice.domain.reviews.client;
 
 import com.eatcloud.storeservice.domain.reviews.dto.OrdersReviewPageResponse;
 import com.eatcloud.storeservice.domain.reviews.dto.RatingSummaryResponse;
