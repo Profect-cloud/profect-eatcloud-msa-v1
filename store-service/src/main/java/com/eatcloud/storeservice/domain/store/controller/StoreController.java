@@ -47,6 +47,14 @@ public class StoreController {
 		return ApiResponse.success(stores);
 	}
 
+	/**
+	 * 키워드와 카테고리 조건으로 매장을 조회하며 페이지네이션과 정렬을 지원한다.
+	 *
+	 * 상세: 요청 DTO에 포함된 키워드·카테고리 조건과 페이지/사이즈/정렬 정보를 기반으로 매장 검색 결과의 페이지를 반환한다.
+	 *
+	 * @param req 검색 키워드, 카테고리 조건 및 페이지네이션(페이지 번호, 페이지 크기)과 정렬 옵션을 포함한 요청 DTO
+	 * @return 검색된 매장 정보를 담은 페이지를 ApiResponse로 래핑하여 반환한다 (Page<StoreSearchResponseDto>)
+	 */
 	@Operation(summary = "3. 키워드 + 카테고리 + 페이지네이션 + 정렬")
 	@GetMapping("/search")
 	public ApiResponse<Page<StoreSearchResponseDto>> searchByKeyword(

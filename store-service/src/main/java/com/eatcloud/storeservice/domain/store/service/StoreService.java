@@ -51,6 +51,16 @@ public class StoreService {
         if (!ok) throw new StoreAccessDeniedException(managerId.toString(), storeId.toString());
     }
 
+    /**
+     * 키워드와 카테고리 조건으로 매장을 페이징·정렬해서 조회한다.
+     *
+     * 요청 DTO의 정렬키(`sort`), 정렬방향(`direction`), 페이지(`page`), 페이지크기(`size`)를 기반으로 Pageable을 구성한 뒤
+     * repository에 위임하여 결과를 반환한다. `sort`가 "rating"이면 평균 평점 필드(`avgRating`)로 정렬하고,
+     * 기본 정렬키는 `createdAt`, 기본 방향은 DESC이다. 동일 정렬값에 대한 결정자(tie-breaker)로 `id`를 DESC로 추가한다.
+     *
+     * @param req 검색 조건 및 페이징/정렬 정보를 담은 요청 DTO
+     * @return 페이징된 StoreSearchResponseDto 결과(Page)
+     */
     public Page<StoreSearchResponseDto> searchStoresByKeyword(StoreKeywordSearchRequestDto req) {
         String sortKey = "createdAt";
         if ("rating".equalsIgnoreCase(req.getSort())) {

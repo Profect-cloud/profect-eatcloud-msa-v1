@@ -19,7 +19,21 @@ public class PublicReviewController {
 
     private final PublicReviewQueryService service;
 
-    /** 가게 리뷰 목록 */
+    /**
+     * 지정한 가게의 공개 리뷰 목록을 조회한다.
+     *
+     * <p>지원하는 쿼리 파라미터로 필터링 및 페이징/정렬을 수행한다.</p>
+     *
+     * @param storeId 조회할 가게의 UUID
+     * @param minRating 최소 평점으로 필터링(미지정 시 제한 없음)
+     * @param hasImage 이미지가 포함된 리뷰만 조회하려면 true, 미지정 시 전체
+     * @param from 조회 시작일시(ISO-8601 형식, 예: yyyy-MM-dd'T'HH:mm:ss)
+     * @param to 조회 종료일시(ISO-8601 형식)
+     * @param page 페이지 번호(0부터 시작, 기본 0)
+     * @param size 페이지 크기(기본 20)
+     * @param sort 정렬 문자열(형식: "property[,asc|desc]"; 기본 "createdAt,desc", 방향이 "asc"인 경우 오름차순, 그 외는 내림차순)
+     * @return 요청 조건에 따른 PublicReviewListResponse(페이징된 리뷰 목록)
+     */
     @GetMapping("/{storeId}/reviews")
     public PublicReviewListResponse list(
             @PathVariable UUID storeId,
@@ -50,7 +64,15 @@ public class PublicReviewController {
         return service.list(storeId, filter, pageable);
     }
 
-    /** 가게 리뷰 요약만 */
+    /**
+     * 지정한 가게의 평점 요약 정보를 조회하여 반환합니다.
+     *
+     * 요청한 가게의 전체 평점 분포와 요약 통계(예: 평균, 총평점 수 등)를 포함한
+     * RatingSummaryResponse를 반환합니다.
+     *
+     * @param storeId 조회할 가게의 UUID
+     * @return 해당 가게의 평점 요약을 담은 RatingSummaryResponse
+     */
     @GetMapping("/{storeId}/ratings/summary")
     public RatingSummaryResponse summary(@PathVariable UUID storeId) {
         return service.summary(storeId);

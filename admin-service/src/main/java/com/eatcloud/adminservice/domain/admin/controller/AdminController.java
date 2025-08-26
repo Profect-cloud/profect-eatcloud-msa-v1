@@ -94,6 +94,14 @@ public class AdminController {
 		return ApiResponse.success(store);
 	}
 
+	/**
+	 * 지정한 가게를 삭제하고 성공 응답을 반환합니다.
+	 *
+	 * <p>요청한 가게 ID(storeId)에 해당하는 가게를 삭제한 뒤, 삭제 성공 메시지를 담은 ApiResponse를 반환합니다.</p>
+	 *
+	 * @param storeId 삭제할 가게의 UUID
+	 * @return 삭제 성공 메시지를 포함한 ApiResponse (HTTP 200)
+	 */
 	@Operation(summary = "3-3. 가게 삭제")
 	@DeleteMapping("/stores/{storeId}")
 	@ResponseStatus(HttpStatus.OK)
@@ -102,6 +110,12 @@ public class AdminController {
 		return ApiResponse.success(ResponseMessage.STORE_DELETE_SUCCESS);
 	}
 
+	/**
+	 * 이메일을 기준으로 사용자의 로그인 정보를 조회하여 HTTP 200 응답으로 반환합니다.
+	 *
+	 * @param email 조회할 사용자의 이메일 주소
+	 * @return 조회된 사용자 로그인 정보(UserLoginDto)를 포함한 HTTP 200 응답
+	 */
 	@GetMapping("/search")
 	public ResponseEntity<UserLoginDto> searchByEmail(@RequestParam String email) {
 		UserLoginDto userLoginDto = adminService.findByEmail(email);

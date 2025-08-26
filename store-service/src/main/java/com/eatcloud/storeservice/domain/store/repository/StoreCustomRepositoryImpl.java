@@ -35,6 +35,17 @@ public class StoreCustomRepositoryImpl implements StoreCustomRepository {
         this.query = query;
     }
 
+    /**
+     * 지정된 카테고리에 속하고 주어진 지점으로부터 특정 반경 이내에 있으며 영업 중인 매장 목록을 반환합니다.
+     *
+     * 데이터베이스의 지리공간 함수(PostGIS ST_DWithin)를 사용해 위도/경도 기준으로 반경(distanceKm, 킬로미터)을 미터로 환산하여 검사합니다.
+     *
+     * @param categoryId   검색할 매장 카테고리의 UUID
+     * @param lat          기준 위도(도)
+     * @param lon          기준 경도(도)
+     * @param distanceKm   탐색 반경(킬로미터)
+     * @return 해당 조건을 만족하는 매장들을 매핑한 StoreSearchResponseDto 목록 (없으면 빈 리스트)
+     */
     @Override
     public List<StoreSearchResponseDto> findStoresByCategoryWithinDistance(UUID categoryId, double lat, double lon, double distanceKm) {
         String sql = """

@@ -57,10 +57,26 @@ public class AdminService {
 		return storePort.getById(storeId);
 	}
 
+	/**
+	 * 지정한 매장을 소프트 삭제(논리 삭제)합니다.
+	 *
+	 * <p>주어진 매장 ID에 해당하는 매장의 삭제 플래그를 설정하여 실제 데이터는 유지하고 조회에서는 제외되도록 처리합니다.
+	 *
+	 * @param storeId 소프트 삭제할 매장의 UUID 식별자
+	 */
 	public void deleteStore(UUID storeId) {
 		storePort.softDeleteById(storeId);
 	}
 
+	/**
+	 * 주어진 이메일로 관리자를 조회하여 로그인에 필요한 UserLoginDto를 반환합니다.
+	 *
+	 * 지정한 이메일의 Admin 엔티티를 찾지 못하면 RuntimeException("Admin not found")을 던집니다.
+	 *
+	 * @param email 조회할 관리자 계정의 이메일
+	 * @return 관리자 정보(id, email, password, name)와 고정된 역할("admin")이 설정된 UserLoginDto
+	 * @throws RuntimeException 관리자를 찾을 수 없을 때 발생
+	 */
 	public UserLoginDto findByEmail(String email) {
 		Admin admin = adminRepository.findByEmail(email)
 				.orElseThrow(() -> new RuntimeException("Admin not found"));
