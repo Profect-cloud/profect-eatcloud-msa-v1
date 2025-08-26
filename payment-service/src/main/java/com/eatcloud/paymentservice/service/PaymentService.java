@@ -205,4 +205,21 @@ public class PaymentService {
                     }
                 });
     }
+
+    /**
+     * 결제 상태를 REFUNDED로 업데이트
+     */
+    @Transactional
+    public void updatePaymentStatusToRefunded(UUID orderId) {
+        log.info("결제 상태를 REFUNDED로 업데이트: orderId={}", orderId);
+        
+        Payment payment = paymentRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new RuntimeException("결제 정보를 찾을 수 없습니다: " + orderId));
+        
+        payment.updateStatus(PaymentStatus.REFUNDED);
+        paymentRepository.save(payment);
+        
+        log.info("결제 상태 REFUNDED로 업데이트 완료: paymentId={}, orderId={}", 
+                payment.getPaymentId(), orderId);
+    }
 } 

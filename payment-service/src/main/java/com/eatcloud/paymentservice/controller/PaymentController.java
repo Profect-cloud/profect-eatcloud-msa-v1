@@ -69,4 +69,23 @@ public class PaymentController {
             return ResponseEntity.badRequest().body("결제 상태 확인 중 오류가 발생했습니다: " + e.getMessage());
         }
     }
+
+    @PostMapping("/refund/{orderId}")
+    @Operation(summary = "결제 환불 상태 업데이트", description = "주문 ID로 결제 상태를 REFUNDED로 업데이트합니다.")
+    public ResponseEntity<String> updatePaymentStatusToRefunded(@PathVariable String orderId,
+                                                              @AuthenticationPrincipal Jwt jwt) {
+        try {
+            UUID customerId = UUID.fromString(jwt.getSubject());
+            
+            log.info("결제 환불 상태 업데이트 요청: customerId={}, orderId={}", customerId, orderId);
+            
+            paymentService.updatePaymentStatusToRefunded(UUID.fromString(orderId));
+            
+            return ResponseEntity.ok("결제 상태가 REFUNDED로 업데이트되었습니다.");
+            
+        } catch (Exception e) {
+            log.error("결제 환불 상태 업데이트 실패", e);
+            return ResponseEntity.badRequest().body("결제 환불 상태 업데이트 중 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
 } 

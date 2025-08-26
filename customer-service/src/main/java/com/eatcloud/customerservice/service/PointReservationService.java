@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +22,9 @@ public class PointReservationService {
 
     private final CustomerRepository customerRepository;
     private final PointReservationRepository pointReservationRepository;
+    private final RestTemplate restTemplate;
+
+    private static final String PAYMENT_SERVICE_URL = "http://payment-service/api/v1/payments";
 
     /**
      * 포인트 예약 생성
@@ -120,6 +124,16 @@ public class PointReservationService {
 
         log.info("포인트 예약 취소 완료: orderId={}, reservationId={}, refundedPoints={}",
                 orderId, reservation.getReservationId(), reservation.getPoints());
+
+        // 포인트 환불 완료 후 PaymentService에 결제 상태 REFUNDED로 업데이트 요청
+        try {
+            String url = PAYMENT_SERVICE_URL + "/refund/" + orderId;
+            restTemplate.postForObject(url, null, String.class);
+            log.info("PaymentService에 결제 상태 REFUNDED 업데이트 요청 완료: orderId={}", orderId);
+        } catch (Exception e) {
+            log.error("PaymentService에 결제 상태 REFUNDED 업데이트 요청 실패: orderId={}", orderId, e);
+            // 포인트 환불은 완료되었으므로 이 오류는 로그만 남기고 계속 진행
+        }
     }
 
     /**

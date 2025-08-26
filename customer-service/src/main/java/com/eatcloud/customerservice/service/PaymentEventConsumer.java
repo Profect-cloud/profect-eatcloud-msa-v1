@@ -34,6 +34,11 @@ public class PaymentEventConsumer {
                 pointReservationService.processReservation(event.getOrderId());
                 log.info("결제 완료로 인한 포인트 예약 처리 완료: orderId={}, paymentId={}", 
                         event.getOrderId(), event.getPaymentId());
+            } else if ("FAILED".equals(event.getPaymentStatus()) || "CANCELLED".equals(event.getPaymentStatus())) {
+                // 결제 실패/취소 시 포인트 예약 취소 (환불)
+                pointReservationService.cancelReservation(event.getOrderId());
+                log.info("결제 실패/취소로 인한 포인트 예약 취소 완료: orderId={}, paymentId={}, status={}", 
+                        event.getOrderId(), event.getPaymentId(), event.getPaymentStatus());
             } else {
                 log.info("결제가 성공하지 않음: orderId={}, status={}", event.getOrderId(), event.getPaymentStatus());
             }
