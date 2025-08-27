@@ -43,11 +43,19 @@ public class OrderController {
 	@PostMapping
 	public ResponseEntity<ApiResponse<CreateOrderResponse>> createOrder(
 			@AuthenticationPrincipal Jwt jwt,
+			@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
 			@RequestBody CreateOrderRequest request) {
 
 		try {
 			UUID customerId = UUID.fromString(jwt.getSubject());
-			CreateOrderResponse response = orderService.createOrderFromCartSimple(customerId, request);
+			
+			// Authorization 헤더에서 Bearer 토큰 추출
+			String bearerToken = null;
+			if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+				bearerToken = authorizationHeader.substring(7); // "Bearer " 제거
+			}
+			
+			CreateOrderResponse response = orderService.createOrderFromCartSimple(customerId, request, bearerToken);
 			return ResponseEntity.ok(ApiResponse.success(response));
 		} catch (IllegalArgumentException e) {
 			log.error("Invalid JWT subject format: {}", jwt != null ? jwt.getSubject() : "null");

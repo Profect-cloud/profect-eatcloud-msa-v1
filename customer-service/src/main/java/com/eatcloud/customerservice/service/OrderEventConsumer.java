@@ -6,52 +6,58 @@ import com.eatcloud.customerservice.entity.ReservationStatus;
 import com.eatcloud.customerservice.event.OrderCreatedEvent;
 import com.eatcloud.customerservice.repository.CustomerRepository;
 import com.eatcloud.customerservice.repository.PointReservationRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class OrderEventConsumer {
     
-    private final CustomerRepository customerRepository;
-    private final PointReservationRepository pointReservationRepository;
+    private final PointReservationService pointReservationService;
+    private final ObjectMapper objectMapper;
     
-    // @KafkaListener(topics = "order.created", groupId = "customer-service")
-    // @Transactional
-    // public void handleOrderCreated(OrderCreatedEvent event) {
-    //     log.info("주문 생성 이벤트 수신: orderId={}, customerId={}, pointsToUse={}",
-    //             event.getOrderId(), event.getCustomerId(), event.getPointsToUse());
-    //
-    //     try {
-    //         if (event.getPointsToUse() == null || event.getPointsToUse() <= 0) {
-    //             log.info("포인트 사용 없음: orderId={}", event.getOrderId());
-    //             return;
-    //         }
-    //
-    //         Customer customer = customerRepository.findById(event.getCustomerId());
-    //                 .orElseThrow(() -> new RuntimeException("고객을 찾을 수 없습니다: " + event.getCustomerId()));
-    //
-    //         customer.reservePoints(event.getPointsToUse());
-    //         customerRepository.save(customer);
-    //
-    //         PointReservation reservation = PointReservation.builder()
-    //                 .customerId(event.getCustomerId())
-    //                 .orderId(event.getOrderId())
-    //                 .points(event.getPointsToUse())
-    //                 .status(ReservationStatus.RESERVED)
-    //                 .build();
-    //
-    //         pointReservationRepository.save(reservation);
-    //
-    //         log.info("포인트 차감 예약 완료: orderId={}, customerId={}, points={}",
-    //                 event.getOrderId(), event.getCustomerId(), event.getPointsToUse());
-    //
-    //     } catch (Exception e) {
-    //         log.error("주문 생성 이벤트 처리 실패: orderId={}", event.getOrderId(), e);
-    //         // 실제 운영에서는 Dead Letter Queue나 재시도 로직을 구현해야 합니다.
-    //     }
-    // }
+    @KafkaListener(topics = "order.created", groupId = "customer-service", containerFactory = "kafkaListenerContainerFactory")
+    @Transactional
+    public void handleOrderCreated(String eventJson) {
+        try {
+            log.info("주문 생성 이벤트 수신 (JSON): {}", eventJson);
+            
+            // JSON 문자열을 OrderCreatedEvent로 파싱
+            OrderCreatedEvent event = objectMapper.readValue(eventJson, OrderCreatedEvent.class);
+            
+            log.info("주문 생성 이벤트 파싱 완료: orderId={}, customerId={}, pointsToUse={}",
+                    event.getOrderId(), event.getCustomerId(), event.getPointsToUse());
+
+            if (event.getPointsToUse() == null || event.getPointsToUse() <= 0) {
+                log.info("포인트 사용 없음: orderId={}", event.getOrderId());
+                return;
+            }
+
+            // 포인트 예약 생성
+            PointReservation reservation = pointReservationService.createReservation(
+                    event.getCustomerId(),
+                    event.getOrderId(),
+                    event.getPointsToUse()
+            );
+
+            log.info("포인트 차감 예약 완료: orderId={}, customerId={}, points={}, reservationId={}",
+                    event.getOrderId(), event.getCustomerId(), event.getPointsToUse(), reservation.getReservationId());
+
+        } catch (JsonProcessingException e) {
+            log.error("주문 생성 이벤트 JSON 파싱 실패: eventJson={}", eventJson, e);
+            // JSON 파싱 실패는 트랜잭션 롤백하지 않음
+        } catch (Exception e) {
+            log.error("주문 생성 이벤트 처리 실패: eventJson={}", eventJson, e);
+            // TODO: Dead Letter Queue 구현 필요
+            throw e; // 트랜잭션 롤백을 위해 예외 재발생
+        }
+    }
 } 

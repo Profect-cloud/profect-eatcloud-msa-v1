@@ -71,6 +71,16 @@ CREATE INDEX IF NOT EXISTS idx_menus_store_category
 CREATE INDEX IF NOT EXISTS idx_menus_stock
   ON p_menus (store_id, is_available, is_unlimited, stock_quantity);
 
+CREATE TABLE IF NOT EXISTS menu_vectors (
+  id BIGSERIAL PRIMARY KEY,
+  menu_name VARCHAR(255) NOT NULL UNIQUE,
+  tfidf_vector JSON,
+  created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_menu_vectors_name
+  ON menu_vectors (menu_name);
+
 -- =====================
 -- Delivery areas
 -- =====================

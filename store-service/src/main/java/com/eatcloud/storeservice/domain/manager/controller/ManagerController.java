@@ -23,9 +23,9 @@ import com.eatcloud.autoresponse.core.ApiResponse;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/manager")
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('MANAGER')")
+// @PreAuthorize("hasRole('MANAGER')")
 @Tag(name = "5. ManagerController")
 public class ManagerController {
 

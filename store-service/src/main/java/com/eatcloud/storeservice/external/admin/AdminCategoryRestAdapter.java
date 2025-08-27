@@ -13,11 +13,13 @@ import java.util.Arrays;
 import java.util.List;
 
 @Component
-@RequiredArgsConstructor
 public class AdminCategoryRestAdapter implements AdminCategoryPort {
 
-    @Qualifier("adminRestClient")
     private final RestClient adminClient;
+
+    public AdminCategoryRestAdapter(@Qualifier("adminRestClient") RestClient adminClient) {
+        this.adminClient = adminClient;
+    }
 
     @Override
     public CategoryDto getStoreCategoryById(Integer id) {

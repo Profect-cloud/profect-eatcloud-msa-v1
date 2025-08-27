@@ -60,4 +60,38 @@ public class PointReservation extends BaseTimeEntity {
         this.status = ReservationStatus.CANCELLED;
         this.processedAt = LocalDateTime.now();
     }
+    
+    // 추가 메서드들
+    public boolean isReserved() {
+        return ReservationStatus.RESERVED.equals(this.status);
+    }
+    
+    public boolean isProcessed() {
+        return ReservationStatus.PROCESSED.equals(this.status);
+    }
+    
+    public boolean isCancelled() {
+        return ReservationStatus.CANCELLED.equals(this.status);
+    }
+    
+    public boolean canProcess() {
+        return isReserved();
+    }
+    
+    public boolean canCancel() {
+        return isReserved();
+    }
+    
+    @Override
+    public String toString() {
+        return "PointReservation{" +
+                "reservationId=" + reservationId +
+                ", customerId=" + customerId +
+                ", orderId=" + orderId +
+                ", points=" + points +
+                ", status=" + status +
+                ", reservedAt=" + reservedAt +
+                ", processedAt=" + processedAt +
+                '}';
+    }
 } 

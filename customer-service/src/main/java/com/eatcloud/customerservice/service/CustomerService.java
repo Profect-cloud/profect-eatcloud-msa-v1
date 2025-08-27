@@ -22,8 +22,11 @@ import com.eatcloud.customerservice.error.CustomerErrorCode;
 import com.eatcloud.autoresponse.error.BusinessException;
 import com.eatcloud.customerservice.repository.CustomerRepository;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
 @Transactional(readOnly = true)
+@Slf4j
 public class CustomerService {
 
 	private final CustomerRepository customerRepository;
@@ -50,6 +53,14 @@ public class CustomerService {
 	public CustomerProfileResponseDto getCustomerProfile(UUID customerId) {
 		Customer customer = getCustomer(customerId);
 		return CustomerProfileResponseDto.from(customer);
+	}
+
+	/**
+	 * 고객의 현재 포인트를 조회합니다.
+	 */
+	public Integer getCustomerPoints(UUID customerId) {
+		Customer customer = getCustomer(customerId);
+		return customer.getPoints() != null ? customer.getPoints() : 0;
 	}
 
 	@Transactional
@@ -127,6 +138,10 @@ public class CustomerService {
 
 	@Transactional
 	public void signup(SignupRequestDto request) {
+		log.info("=== 회원가입 시작 ===");
+		log.info("요청 데이터: email={}, name={}, nickname={}, phone={}, points={}", 
+			request.getEmail(), request.getName(), request.getNickname(), request.getPhone(), request.getPoints());
+		
 		try {
 			Customer customer = new Customer();
 			customer.setEmail(request.getEmail());
@@ -135,8 +150,23 @@ public class CustomerService {
 			customer.setNickname(request.getNickname());
 			customer.setPhoneNumber(request.getPhone());
 			
-			customerRepository.save(customer);
+			// 회원가입 시 포인트 설정 (기본값 0)
+			Integer points = request.getPoints() != null ? request.getPoints() : 0;
+			customer.setPoints(points);
+			
+			log.info("Customer 엔티티 생성 완료: {}", customer);
+			
+			Customer savedCustomer = customerRepository.save(customer);
+			log.info("데이터베이스 저장 완료: savedCustomer={}", savedCustomer);
+			
+			// 저장된 데이터 재확인
+			Customer foundCustomer = customerRepository.findById(savedCustomer.getId()).orElse(null);
+			log.info("저장된 데이터 재확인: foundCustomer={}", foundCustomer);
+			
+			log.info("=== 회원가입 완료 (포인트: {}) ===", points);
 		} catch (Exception e) {
+			log.error("=== 회원가입 실패 ===");
+			log.error("오류 발생: {}", e.getMessage(), e);
 			throw new RuntimeException("회원가입 처리 중 오류가 발생했습니다: " + e.getMessage());
 		}
 	}
