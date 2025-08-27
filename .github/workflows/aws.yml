@@ -13,7 +13,6 @@ env:
   ECS_CLUSTER_PRODUCTION: eatcloud-cluster
 
 jobs:
-  # 변경된 서비스 감지
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
@@ -29,10 +28,8 @@ jobs:
         id: changes
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            # PR의 경우 base 브랜치와 비교
             changed_files=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
           else
-            # Push의 경우 이전 커밋과 비교
             changed_files=$(git diff --name-only HEAD~1 HEAD)
           fi
           
@@ -41,32 +38,26 @@ jobs:
           
           services=()
           
-          # 각 서비스별로 변경사항 확인 (eureka-server, api-gateway 제외)
           for service in auth-service customer-service admin-service manager-service store-service order-service payment-service; do
             if echo "$changed_files" | grep -q "^$service/"; then
               services+=("$service")
             fi
           done
           
-          # 루트 레벨 변경사항 (모든 서비스에 영향)
           if echo "$changed_files" | grep -qE "^(build\.gradle|settings\.gradle|docker-compose\.yml|gradle/|\.github/workflows/)"; then
             services=(auth-service customer-service admin-service manager-service store-service order-service payment-service)
           fi
           
-          # 최초 커밋이나 서비스가 없는 경우 모든 서비스 빌드
           if [ ${#services[@]} -eq 0 ]; then
             services=(auth-service customer-service admin-service manager-service store-service order-service payment-service)
           fi
           
-          # JSON 배열로 변환
           services_json=$(printf '%s\n' "${services[@]}" | jq -R -s -c 'split("\n")[:-1]')
           echo "services=$services_json" >> $GITHUB_OUTPUT
           
-          # Matrix 전략을 위한 형태로 변환
           matrix_json=$(printf '%s\n' "${services[@]}" | jq -R -s -c '{"service": split("\n")[:-1]}')
           echo "matrix=$matrix_json" >> $GITHUB_OUTPUT
           
-          # 변경사항 여부
           if [ ${#services[@]} -gt 0 ]; then
             echo "has_changes=true" >> $GITHUB_OUTPUT
           else
@@ -75,7 +66,6 @@ jobs:
           
           echo "Detected services: $services_json"
 
-  # 테스트 및 빌드
   test-and-build:
     needs: detect-changes
     if: needs.detect-changes.outputs.has_changes == 'true'
@@ -83,7 +73,7 @@ jobs:
     strategy:
       matrix: ${{fromJson(needs.detect-changes.outputs.matrix)}}
       fail-fast: false
-    
+
     steps:
       - uses: actions/checkout@v4
 
@@ -128,7 +118,6 @@ jobs:
           path: ${{ matrix.service }}/build/libs/*.jar
           retention-days: 30
 
-  # ECR에 Docker 이미지 빌드 및 푸시
   build-and-push-ecr:
     needs: [detect-changes, test-and-build]
     if: needs.detect-changes.outputs.has_changes == 'true' && github.event_name == 'push'
@@ -190,7 +179,6 @@ jobs:
         run: |
           aws ecr start-image-scan --repository-name eatcloud/${{ matrix.service }} --image-id imageTag=latest || true
 
-  # ECS 네이티브 Blue/Green 배포 (develop 브랜치)
   deploy-staging-ecs-bluegreen:
     needs: [detect-changes, build-and-push-ecr]
     if: needs.detect-changes.outputs.has_changes == 'true' && github.ref == 'refs/heads/develop'
@@ -210,7 +198,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # 스마트 Task Definition 업데이트
       - name: Smart Task Definition Update
         id: task-def
         run: |
@@ -220,7 +207,6 @@ jobs:
           echo "🔍 Smart deployment for: $TASK_DEF_FAMILY"
           echo "🔖 New Image: $NEW_IMAGE"
           
-          # 현재 서비스 정보 확인
           CURRENT_TASK_DEF=$(aws ecs describe-services \
             --cluster ${{ env.ECS_CLUSTER_STAGING }} \
             --services ${{ matrix.service }} \
@@ -229,7 +215,6 @@ jobs:
           
           echo "📋 Current Task Definition: $CURRENT_TASK_DEF"
           
-          # 현재 이미지 확인
           CURRENT_IMAGE=$(aws ecs describe-task-definition \
             --task-definition "$CURRENT_TASK_DEF" \
             --query 'taskDefinition.containerDefinitions[0].image' \
@@ -237,22 +222,18 @@ jobs:
           
           echo "🔍 Current Image: $CURRENT_IMAGE"
           
-          # 이미지가 다른 경우에만 새 Task Definition 생성
           if [ "$CURRENT_IMAGE" != "$NEW_IMAGE" ]; then
             echo "🔄 Image changed, creating new task definition revision..."
           
-            # 기존 Task Definition을 복사하고 이미지만 업데이트
             TASK_DEF_JSON=$(aws ecs describe-task-definition \
               --task-definition "$CURRENT_TASK_DEF" \
               --query 'taskDefinition' --output json)
           
-            # 이미지 업데이트 및 메타데이터 제거
             echo "$TASK_DEF_JSON" | jq --arg IMAGE "$NEW_IMAGE" \
               '.containerDefinitions[0].image = $IMAGE | 
                del(.taskDefinitionArn, .revision, .status, .requiresAttributes, 
                    .placementConstraints, .compatibilities, .registeredAt, .registeredBy)' > new-task-def.json
           
-            # 새 revision 등록
             NEW_TASK_DEF_ARN=$(aws ecs register-task-definition \
               --cli-input-json file://new-task-def.json \
               --query 'taskDefinition.taskDefinitionArn' --output text)
@@ -266,13 +247,11 @@ jobs:
             echo "DEPLOYMENT_TYPE=FORCE_DEPLOYMENT" >> $GITHUB_OUTPUT
           fi
 
-      # 스마트 ECS Blue/Green 배포 시작
       - name: Start Smart ECS Blue/Green Deployment
         run: |
           echo "🚀 Starting smart ECS Blue/Green deployment..."
           echo "📊 Deployment Type: ${{ steps.task-def.outputs.DEPLOYMENT_TYPE }}"
           
-          # 배포 전 상태 확인
           echo "📊 Pre-deployment status:"
           aws ecs describe-services \
             --cluster ${{ env.ECS_CLUSTER_STAGING }} \
@@ -280,7 +259,6 @@ jobs:
             --query 'services[0].{Status:status,RunningCount:runningCount,TaskDefinition:taskDefinition,DeploymentController:deploymentController}' \
             --output table
           
-          # 배포 타입에 따른 서비스 업데이트
           if [ "${{ steps.task-def.outputs.DEPLOYMENT_TYPE }}" = "NEW_REVISION" ]; then
             echo "🔄 Deploying with new Task Definition revision..."
             aws ecs update-service \
@@ -297,16 +275,13 @@ jobs:
           
           echo "✅ ECS Blue/Green deployment initiated"
 
-      # 배포 진행 상황 모니터링
       - name: Monitor Deployment Progress
         run: |
           echo "📊 Monitoring ECS Blue/Green deployment progress..."
           
-          # 배포 상태를 주기적으로 확인
           for i in {1..40}; do
             echo "🔍 Deployment check $i/40 ($(date))"
           
-            # 서비스 상태 확인
             SERVICE_STATUS=$(aws ecs describe-services \
               --cluster ${{ env.ECS_CLUSTER_STAGING }} \
               --services ${{ matrix.service }} \
@@ -317,14 +292,12 @@ jobs:
             PENDING_COUNT=$(echo "$SERVICE_STATUS" | jq -r '.pendingCount')
             DESIRED_COUNT=$(echo "$SERVICE_STATUS" | jq -r '.desiredCount')
           
-            # 배포 상태 확인
             DEPLOYMENTS=$(echo "$SERVICE_STATUS" | jq -r '.deployments[] | "Status: \(.status), Tasks: \(.runningCount)/\(.desiredCount), TD: \(.taskDefinition | split("/") | .[-1])"')
           
             echo "📊 Service Status: Running=$RUNNING_COUNT, Pending=$PENDING_COUNT, Desired=$DESIRED_COUNT"
             echo "🚀 Deployments:"
             echo "$DEPLOYMENTS" | sed 's/^/  - /'
           
-            # 안정 상태 확인
             STABLE_DEPLOYMENTS=$(echo "$SERVICE_STATUS" | jq -r '.deployments | map(select(.status == "PRIMARY")) | length')
             if [ "$STABLE_DEPLOYMENTS" = "1" ] && [ "$RUNNING_COUNT" = "$DESIRED_COUNT" ] && [ "$PENDING_COUNT" = "0" ]; then
               echo "✅ Deployment reached stable state!"
@@ -341,16 +314,14 @@ jobs:
             sleep 30
           done
 
-      # ECS 내장 waiter로 최종 안정화 대기
       - name: Wait for Final Stabilization
         run: |
           echo "⏳ Waiting for ECS service to fully stabilize..."
           
-          # ECS 내장 waiter 사용 (더 정확한 안정화 확인)
           aws ecs wait services-stable \
             --cluster ${{ env.ECS_CLUSTER_STAGING }} \
             --services ${{ matrix.service }} \
-            --cli-read-timeout 900
+            --cli-read-timeout 300
           
           WAIT_RESULT=$?
           if [ $WAIT_RESULT -eq 0 ]; then
@@ -358,7 +329,6 @@ jobs:
           else
             echo "⚠️ Service stabilization timeout (continuing with verification)"
           
-            # waiter 실패해도 서비스가 안정 상태이면 계속 진행
             FINAL_STATUS=$(aws ecs describe-services \
               --cluster ${{ env.ECS_CLUSTER_STAGING }} \
               --services ${{ matrix.service }} \
@@ -377,12 +347,10 @@ jobs:
             fi
           fi
 
-      # 배포 결과 검증 및 Target Group 상태 확인
       - name: Verify Deployment Results
         run: |
           echo "🔍 Verifying deployment results..."
           
-          # 최종 서비스 상태
           SERVICE_STATUS=$(aws ecs describe-services \
             --cluster ${{ env.ECS_CLUSTER_STAGING }} \
             --services ${{ matrix.service }} \
@@ -401,10 +369,8 @@ jobs:
           echo "  - Deployment Controller: $DEPLOYMENT_CONTROLLER"
           echo "  - Deployment Method: ECS Native Blue/Green"
           
-          # Target Group 상태 확인
           echo "🏥 Checking Target Group health status..."
           
-          # 서비스와 연결된 Target Group들 찾기
           TARGET_GROUPS=$(aws elbv2 describe-target-groups \
             --query "TargetGroups[?contains(TargetGroupName, '${{ matrix.service }}')].{Name:TargetGroupName,Arn:TargetGroupArn}" \
             --output json)
@@ -412,7 +378,6 @@ jobs:
           echo "🎯 Found Target Groups:"
           echo "$TARGET_GROUPS" | jq -r '.[] | "  - \(.Name): \(.Arn)"'
           
-          # 각 Target Group의 건강 상태 확인
           TOTAL_HEALTHY=0
           for tg_arn in $(echo "$TARGET_GROUPS" | jq -r '.[].Arn'); do
             TG_NAME=$(echo "$TARGET_GROUPS" | jq -r ".[] | select(.Arn==\"$tg_arn\") | .Name")
@@ -431,7 +396,6 @@ jobs:
             TOTAL_HEALTHY=$((TOTAL_HEALTHY + HEALTHY_COUNT))
           done
           
-          # 배포 성공 여부 최종 판단
           if [ "$RUNNING_COUNT" = "$DESIRED_COUNT" ] && [ "$RUNNING_COUNT" -gt 0 ] && [ "$TOTAL_HEALTHY" -gt 0 ]; then
             echo "🎉 ECS Blue/Green deployment completed successfully!"
             echo "✨ Zero-downtime deployment achieved with ECS native Blue/Green!"
@@ -443,13 +407,11 @@ jobs:
             exit 1
           fi
 
-      # 롤백 메커니즘 (실패 시에만 실행)
       - name: Rollback on Failure
         if: failure()
         run: |
           echo "🚨 Deployment failed, checking rollback options..."
           
-          # 현재 서비스 상태 확인
           echo "📊 Current Service Status:"
           aws ecs describe-services \
             --cluster ${{ env.ECS_CLUSTER_STAGING }} \
@@ -460,7 +422,6 @@ jobs:
           echo "ℹ️ ECS manages automatic rollback for failed deployments"
           echo "ℹ️ Check ECS console for detailed rollback status"
 
-  # Production 수동 배포 준비 알림
   production-deploy-ready:
     needs: [detect-changes, build-and-push-ecr]
     if: needs.detect-changes.outputs.has_changes == 'true' && github.ref == 'refs/heads/main'
