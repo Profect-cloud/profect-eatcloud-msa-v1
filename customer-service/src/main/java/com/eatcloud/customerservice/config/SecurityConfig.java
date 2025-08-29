@@ -26,12 +26,10 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/customers/signup", 
                                  "/api/v1/customers/search",
-                                 "/api/v1/test/**",
                                  "/actuator/**",
                                  "/swagger-ui/**",
                                  "/v3/api-docs/**").permitAll()

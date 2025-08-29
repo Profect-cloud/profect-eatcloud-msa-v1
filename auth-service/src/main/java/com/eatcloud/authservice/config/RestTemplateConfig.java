@@ -10,7 +10,7 @@ import org.springframework.web.client.RestTemplate;
 public class RestTemplateConfig {
 
     @Bean
-    @LoadBalanced // Eureka 서비스 이름으로 호출 가능
+    @LoadBalanced
     public RestTemplate restTemplate(RestTemplateBuilder builder) {
         return builder.build();
     }

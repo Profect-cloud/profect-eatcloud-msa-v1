@@ -15,28 +15,24 @@ public class GatewayConfig {
 		log.info("🚀 Configuring Gateway Routes...");
 
 		return builder.routes()
-			// Auth Service Routes
 			.route("auth-service", r -> r
 				.path("/api/v1/auth/**")
 				.filters(f -> f
 					.addRequestHeader("X-Service-Name", "auth-service"))
 				.uri("lb://auth-service"))
 
-			// Customer Service Routes
 			.route("customer-service", r -> r
 				.path("/api/v1/customers/**")
 				.filters(f -> f
 					.addRequestHeader("X-Service-Name", "customer-service"))
 				.uri("lb://customer-service"))
 
-			// Admin Service Routes
 			.route("admin-service", r -> r
 				.path("/api/v1/admin/**")
 				.filters(f -> f
 					.addRequestHeader("X-Service-Name", "admin-service"))
 				.uri("lb://admin-service"))
 
-			// Manager Service Routes
 			.route("manager-service", r -> r
 				.path("/api/v1/manager/**")
 				.filters(f -> f
@@ -50,36 +46,30 @@ public class GatewayConfig {
 					.addRequestHeader("X-Service-Name", "store-service"))
 				.uri("lb://store-service"))
 
-			// Order Service Routes
 			.route("order-service", r -> r
 				.path("/api/v1/orders/**")
 				.filters(f -> f
-					.stripPrefix(2)
 					.addRequestHeader("X-Service-Name", "order-service"))
 				.uri("lb://order-service"))
 
-			// Payment Service Routes (API)
 			.route("payment-service", r -> r
 				.path("/api/v1/payments/**")
 				.filters(f -> f
 					.addRequestHeader("X-Service-Name", "payment-service"))
 				.uri("lb://payment-service"))
 
-			// Payment View Routes (serve Thymeleaf views through gateway)
 			.route("payment-service-views", r -> r
 				.path("/payments/**")
 				.filters(f -> f
 					.addRequestHeader("X-Service-Name", "payment-service"))
 				.uri("lb://payment-service"))
 
-			// Payment Callbacks (success/fail/cancel)
 			.route("payment-service-callbacks", r -> r
 				.path("/api/v1/payment/**")
 				.filters(f -> f
 					.addRequestHeader("X-Service-Name", "payment-service"))
 				.uri("lb://payment-service"))
 
-			// Swagger UI Routes for each service
 			.route("auth-service-swagger", r -> r
 				.path("/auth-service/**")
 				.filters(f -> f

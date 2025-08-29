@@ -1,18 +1,17 @@
-package com.eatcloud.authservice.config;
+package com.eatcloud.managerservice.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.security.SecurityScheme;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.info.Info;
-import org.springframework.http.HttpHeaders;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 
 @Configuration
 public class SwaggerConfig {
-    //http://localhost:8080/swagger-ui/index.html
-    // https://fiteam.shop/swagger-ui/index.html
     @Bean
     public OpenAPI customOpenAPI() {
         Components components = new Components()
@@ -36,7 +35,7 @@ public class SwaggerConfig {
 
     private Info info() {
         return new Info()
-                .title("Auth Service API Documentation")
+                .title("Manager Service API Documentation")
                 .description("")
                 .version("1.1");
     }
