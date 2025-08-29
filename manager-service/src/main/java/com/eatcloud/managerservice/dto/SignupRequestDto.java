@@ -1,4 +1,4 @@
-package com.eatcloud.customerservice.dto;
+package com.eatcloud.managerservice.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -13,7 +13,6 @@ public class SignupRequestDto {
     private String email;
     private String password;
     private String name;
-    private String nickname;
     private String phone;
     private String role;
 }
