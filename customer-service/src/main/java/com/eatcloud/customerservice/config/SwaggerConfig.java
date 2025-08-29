@@ -38,7 +38,7 @@ public class SwaggerConfig {
 
     private Info info() {
         return new Info()
-                .title("Fiteam API Documentation")
+                .title("Customer Service API Documentation")
                 .description("")
                 .version("1.1");
     }

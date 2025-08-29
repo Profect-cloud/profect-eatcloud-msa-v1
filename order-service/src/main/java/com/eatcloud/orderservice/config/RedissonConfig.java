@@ -11,10 +11,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-/**
- * Redisson 설정 클래스
- * 분산락, 분산 트랜잭션 등 고급 Redis 기능 지원
- */
 @Configuration
 public class RedissonConfig {
 
@@ -57,12 +53,10 @@ public class RedissonConfig {
     public RedisTemplate<String, Object> redisTemplate(RedissonConnectionFactory connectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
-        
-        // Key Serializer
+
         template.setKeySerializer(new StringRedisSerializer());
         template.setHashKeySerializer(new StringRedisSerializer());
-        
-        // Value Serializer
+
         template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
         template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
         
