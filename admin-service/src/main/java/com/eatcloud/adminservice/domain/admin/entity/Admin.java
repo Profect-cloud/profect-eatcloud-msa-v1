@@ -12,7 +12,6 @@ import java.util.UUID;
 @SQLRestriction("deleted_at is null")
 @Table(name = "p_admins")
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

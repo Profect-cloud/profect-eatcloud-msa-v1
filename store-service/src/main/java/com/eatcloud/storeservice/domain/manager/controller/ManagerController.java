@@ -25,7 +25,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
-// @PreAuthorize("hasRole('MANAGER')")
+@PreAuthorize("hasAnyRole('MANAGER')")
 @Tag(name = "5. ManagerController")
 public class ManagerController {
 

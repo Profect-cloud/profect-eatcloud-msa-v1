@@ -13,7 +13,6 @@ import java.util.UUID;
 @Table(name = "p_menus")
 @SQLRestriction("deleted_at is null")
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

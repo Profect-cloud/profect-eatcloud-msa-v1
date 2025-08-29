@@ -9,8 +9,5 @@ import java.util.Map;
 @RestController
 @RequestMapping("/internal")
 public class AdminInternalProbeController {
-    @GetMapping("/ping")
-    public Map<String, Object> ping() {
-        return Map.of("service","admin-service","ok",true);
-    }
+
 }
