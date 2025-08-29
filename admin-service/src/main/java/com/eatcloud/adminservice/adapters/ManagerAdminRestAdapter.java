@@ -23,7 +23,7 @@ public class ManagerAdminRestAdapter implements ManagerAdminPort {
     public UUID upsert(ManagerUpsertCommand cmd) {
         try {
             return managerAdminRestClient.post()
-                    .uri("/internal/admin/managers:upsert")  // 매니저 서비스의 내부 API
+                    .uri("/internal/admin/managers:upsert")
                     .body(cmd)
                     .retrieve()
                     .onStatus(s -> s.value()==400, (req,res) -> new AdminException(AdminErrorCode.MANAGER_SERVICE_FAILED))

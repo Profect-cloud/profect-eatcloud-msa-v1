@@ -35,8 +35,8 @@ dependencies {
 tasks.matching { it.name == "bootJar" }.configureEach { enabled = false }
 tasks.named("jar").configure {
     enabled = true
-} // 라이브러리 JAR
+}
 tasks.withType(Javadoc).configureEach {
-    options.addBooleanOption('Xdoclint:none', true) // 문서 검사 완화
-    failOnError = false                              // 경고를 에러로 취급하지 않음
+    options.addBooleanOption('Xdoclint:none', true)
+    failOnError = false
 }

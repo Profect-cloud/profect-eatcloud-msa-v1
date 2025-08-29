@@ -1,8 +1,5 @@
 package com.eatcloud.orderservice.exception;
 
-/**
- * 주문 관련 예외 클래스
- */
 public class OrderException extends RuntimeException {
     private final ErrorCode errorCode;
 

@@ -124,12 +124,11 @@ public class StoreCustomRepositoryImpl implements StoreCustomRepository {
     public Page<StoreSearchResponseDto> searchByKeywordAndCategory(
             StoreKeywordSearchRequestDto req, Pageable pageable) {
 
-        QStore s = QStore.store;   // TODO: 패키지/클래스명 확인
-        QMenu  m = QMenu.menu;     // TODO: 패키지/클래스명 확인
+        QStore s = QStore.store;
+        QMenu  m = QMenu.menu;
 
         BooleanBuilder where = new BooleanBuilder();
 
-        // 키워드: 매장명/설명/메뉴명 (ILIKE 대체)
         if (req.getQ() != null && !req.getQ().isBlank()) {
             String like = "%" + req.getQ() + "%";
             where.and(
@@ -139,7 +138,6 @@ public class StoreCustomRepositoryImpl implements StoreCustomRepository {
             );
         }
 
-        // 카테고리 필터
         if (req.getStoreCategoryId() != null) {
             // TODO: Store 엔티티에 상위 카테고리 컬럼명이 다르면 수정
             where.and(s.storeCategoryId.eq(req.getStoreCategoryId()));
@@ -149,10 +147,8 @@ public class StoreCustomRepositoryImpl implements StoreCustomRepository {
             where.and(m.menuCategoryCode.eq(req.getMenuCategoryCode()));
         }
 
-        // 정렬 매핑 (rating/createdAt)
         OrderSpecifier<?>[] orderSpecifiers = toOrderSpecifiers(pageable, s);
 
-        // 본 쿼리: DTO로 바로 프로젝션
         List<StoreSearchResponseDto> content = query
                 .select(Projections.bean(
                         StoreSearchResponseDto.class,
@@ -186,7 +182,6 @@ public class StoreCustomRepositoryImpl implements StoreCustomRepository {
     private OrderSpecifier<?>[] toOrderSpecifiers(Pageable pageable, QStore s) {
         List<OrderSpecifier<?>> list = new ArrayList<>();
 
-        // sort 미지정 시 기본 정렬 (예: 이름 오름차순)
         if (pageable.getSort().isEmpty()) {
             list.add(s.storeName.asc());
             list.add(s.storeId.desc()); // tie-breaker
@@ -200,12 +195,10 @@ public class StoreCustomRepositoryImpl implements StoreCustomRepository {
                 case "minCost"   -> list.add(new OrderSpecifier<>(dir, s.minCost));
                 case "openStatus"-> list.add(new OrderSpecifier<>(dir, s.openStatus));
                 case "storeId"   -> list.add(new OrderSpecifier<>(dir, s.storeId));
-                // createdAt, rating 등은 나중에 컬럼 생기면 추가
                 default -> { /* 미지원 정렬키는 무시 */ }
             }
         }
 
-        // 항상 안정성 보장용 tie-breaker
         list.add(s.storeId.desc());
         return list.toArray(OrderSpecifier[]::new);
     }

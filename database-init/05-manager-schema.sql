@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS p_managers (
     phone_number VARCHAR(18),
     position     VARCHAR(50),
 
-    -- audit & soft-delete (auto-time BaseTimeEntity와 매핑)
     created_at   TIMESTAMP,
     created_by   VARCHAR(50),
     updated_at   TIMESTAMP,

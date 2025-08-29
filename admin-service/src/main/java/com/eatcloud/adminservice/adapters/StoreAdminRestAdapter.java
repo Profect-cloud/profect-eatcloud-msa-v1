@@ -1,4 +1,3 @@
-// adapters/StoreAdminRestAdapter.java
 package com.eatcloud.adminservice.adapters;
 
 import com.eatcloud.adminservice.ports.*;

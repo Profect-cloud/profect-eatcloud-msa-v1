@@ -60,8 +60,7 @@ public class PointReservation extends BaseTimeEntity {
         this.status = ReservationStatus.CANCELLED;
         this.processedAt = LocalDateTime.now();
     }
-    
-    // 추가 메서드들
+
     public boolean isReserved() {
         return ReservationStatus.RESERVED.equals(this.status);
     }

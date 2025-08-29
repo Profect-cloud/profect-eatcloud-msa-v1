@@ -47,10 +47,9 @@ class ModernOrderControllerTest {
 
     @BeforeEach
     void setUp() {
-        // MockMvc를 수동으로 설정 - Spring Context 없이
         mockMvc = MockMvcBuilders
                 .standaloneSetup(orderController)
-                .setControllerAdvice(new TestExceptionHandler()) // 예외 처리기 추가
+                .setControllerAdvice(new TestExceptionHandler())
                 .build();
 
         objectMapper = new ObjectMapper();
@@ -105,7 +104,6 @@ class ModernOrderControllerTest {
                 .paymentId(paymentId)
                 .build();
 
-        // When & Then
         mockMvc.perform(post("/orders/{orderId}/payment/complete", orderId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(paymentRequest)))
@@ -139,7 +137,6 @@ class ModernOrderControllerTest {
                 .andExpect(jsonPath("$.message").value("데이터베이스 연결 오류"));
     }
 
-    // 테스트용 예외 처리기
     @RestControllerAdvice
     static class TestExceptionHandler {
 
@@ -156,7 +153,6 @@ class ModernOrderControllerTest {
         }
     }
 
-    // 에러 응답 DTO
     static class ErrorResponse {
         private boolean success;
         private String message;

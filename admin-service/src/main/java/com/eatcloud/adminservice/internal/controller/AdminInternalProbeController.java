@@ -6,7 +6,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
-// admin-service / internal/AdminInternalProbeController.java
 @RestController
 @RequestMapping("/internal")
 public class AdminInternalProbeController {

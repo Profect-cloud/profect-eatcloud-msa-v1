@@ -21,7 +21,6 @@ public class OrderCancelledEventConsumer {
                 event.getOrderId(), event.getCustomerId(), event.getCancelReason());
 
         try {
-            // 주문 취소 시 포인트 예약 취소 및 환불
             pointReservationService.cancelReservation(event.getOrderId());
             
             log.info("주문 취소로 인한 포인트 예약 취소 완료: orderId={}, customerId={}", 
@@ -30,7 +29,7 @@ public class OrderCancelledEventConsumer {
         } catch (Exception e) {
             log.error("주문 취소 이벤트 처리 실패: orderId={}", event.getOrderId(), e);
             // TODO: Dead Letter Queue 구현 필요
-            throw e; // 트랜잭션 롤백을 위해 예외 재발생
+            throw e;
         }
     }
 }

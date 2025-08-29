@@ -313,17 +313,14 @@
     </div>
 
     <div class="content">
-        <!-- 가게 정보 -->
         <div class="store-info">
             <div class="store-name">맛있는 한식당</div>
             <div class="store-desc">⭐ 4.8 • 배달비 3,000원 • 30-40분</div>
         </div>
 
-        <!-- 메뉴 선택 -->
         <div class="menu-section">
             <div class="section-title">🍜 메뉴 선택</div>
 
-            <!-- 메인 메뉴 -->
             <div class="storeCategory-title">🍗 메인 메뉴</div>
 
             <div class="menu-item">
@@ -411,7 +408,6 @@
                 </div>
             </div>
 
-            <!-- 음료 -->
             <div class="storeCategory-title">🥤 음료</div>
 
             <div class="menu-item">
@@ -432,7 +428,6 @@
             </div>
         </div>
 
-        <!-- 주문 요약 -->
         <div class="cart-summary" id="cart-summary" style="display: none;">
             <div class="section-title">🛒 주문 내역</div>
             <div id="cart-items"></div>
@@ -446,7 +441,6 @@
             </div>
         </div>
 
-        <!-- 포인트 사용 -->
         <div class="point-section" id="point-section" style="display: none;">
             <div class="section-title">💰 포인트 사용</div>
             <div class="point-info">
@@ -473,7 +467,6 @@
             </div>
         </div>
 
-        <!-- 결제 버튼 -->
         <div class="payment-amount" id="payment-amount" style="display: none;">
             결제금액: <span id="final-amount">0</span>원
         </div>
@@ -484,15 +477,12 @@
     </div>
 </div>
 
-<!-- 토스페이먼츠 SDK -->
 <script src="https://js.tosspayments.com/v1/payment"></script>
 
 <script th:inline="javascript">
-    // 서버에서 받은 데이터
     const customerPoints = /*[[${customerPoints}]]*/ 5000;
     const customerId = /*[[${customerId}]]*/ '11111111-1111-1111-1111-111111111111';
 
-    // 메뉴 데이터 (실제 DB 데이터 기반)
     const menuData = {
         '550e8400-e29b-41d4-a716-446655440001': {
             name: '후라이드치킨',
@@ -532,14 +522,12 @@
         }
     };
 
-    // 주문 상태
     let cart = {};
     let deliveryFee = 3000;
     let totalAmount = 0;
     let pointsToUse = 0;
     let finalPaymentAmount = 0;
 
-    // 수량 업데이트
     function updateQuantity(menuId, change) {
         if (!cart[menuId]) cart[menuId] = 0;
         cart[menuId] = Math.max(0, cart[menuId] + change);
@@ -548,7 +536,6 @@
         updateCartSummary();
     }
 
-    // 장바구니 요약 업데이트
     function updateCartSummary() {
         const cartItems = document.getElementById('cart-items');
         const cartSummary = document.getElementById('cart-summary');
@@ -590,7 +577,6 @@
         }
     }
 
-    // 포인트 사용 토글
     function togglePointUse() {
         const usePoints = document.getElementById('usePoints').checked;
         const pointInputGroup = document.getElementById('point-input-group');
@@ -607,7 +593,6 @@
         }
     }
 
-    // 최대 포인트 사용
     function useMaxPoints() {
         if (totalAmount === 0) {
             alert('먼저 메뉴를 선택해주세요.');
@@ -620,7 +605,6 @@
         calculatePaymentAmount();
     }
 
-    // 포인트 입력 유효성 검사 및 계산
     function validateAndCalculatePoints() {
         const pointInput = document.getElementById('pointAmount');
         const pointError = document.getElementById('point-error');
@@ -658,7 +642,6 @@
         pointError.style.display = 'none';
     }
 
-    // 결제 금액 계산
     function calculatePaymentAmount() {
         const pointInput = document.getElementById('pointAmount');
         const usePointsCheckbox = document.getElementById('usePoints');
@@ -702,7 +685,6 @@
         });
     }
 
-    // 결제 진행
     function proceedToPayment() {
         if (totalAmount === 0) {
             alert('주문할 메뉴를 선택해주세요.');
@@ -765,7 +747,6 @@
             });
     }
 
-    // 토스페이먼츠 결제 요청
     function requestTossPayment(paymentData) {
         const clientKey = paymentData.clientKey;
         const tossPayment = new TossPayments(clientKey);
@@ -788,7 +769,6 @@
         });
     }
 
-    // 페이지 로드시 초기화
     document.addEventListener('DOMContentLoaded', function () {
         console.log('주문 페이지 로드 완료');
         console.log('고객 포인트:', customerPoints);

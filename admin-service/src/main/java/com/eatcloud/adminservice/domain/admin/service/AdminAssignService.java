@@ -76,20 +76,17 @@ public class AdminAssignService {
 			throw new AdminException(AdminErrorCode.APPLICATION_ALREADY_PROCESSED);
 		}
 
-		// (선택) 카테고리 존재 검증
 		if (app.getCategoryId() != null && !categoryRepository.existsById(app.getCategoryId())) {
 			throw new AdminException(AdminErrorCode.CATEGORY_NOT_FOUND);
 		}
 
-		// 1) 매니저 계정 보장 → email 기반 upsert, managerId 반환
 		UUID managerId = managerAdminPort.upsert(new ManagerUpsertCommand(
-				null,                              // 신청서엔 managerId가 없으므로 null
+				null,
 				app.getManagerEmail(),
 				app.getManagerName(),
 				app.getManagerPhoneNumber()
 		));
 
-		// 2) 스토어 생성(멱등키: applicationId)
 		storeAdminPort.createStore(new CreateStoreCommand(
 				app.getApplicationId(),
 				managerId,
@@ -100,13 +97,11 @@ public class AdminAssignService {
 				app.getDescription()
 		));
 
-		// 3) 상태 변경
 		app.setStatus("APPROVED");
 		app.setReviewerAdminId(adminId);
 		applicationRepository.save(app);
 	}
 
-	// AdminAssignService (또는 AdminService)
 	@Transactional
 	public void rejectApplication(UUID adminId, UUID applicationId) {
 		rejectApplication(adminId, applicationId, null); // 코멘트 없이 거절
@@ -124,7 +119,7 @@ public class AdminAssignService {
 
 		app.setStatus("REJECTED");
 		app.setReviewerAdminId(adminId);
-		app.setReviewComment(comment); // null 가능
+		app.setReviewComment(comment);
 		applicationRepository.save(app);
 	}
 

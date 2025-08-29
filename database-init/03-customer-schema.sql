@@ -39,7 +39,6 @@ CREATE TABLE IF NOT EXISTS p_addresses (
     );
 CREATE INDEX IF NOT EXISTS idx_addresses_customer ON p_addresses(customer_id);
 
--- 포인트 예약 테이블
 CREATE TABLE IF NOT EXISTS point_reservations (
     reservation_id UUID PRIMARY KEY,
     customer_id    UUID NOT NULL,
@@ -56,7 +55,6 @@ CREATE TABLE IF NOT EXISTS point_reservations (
     deleted_by     VARCHAR(100)
 );
 
--- 포인트 예약 인덱스
 CREATE INDEX IF NOT EXISTS idx_point_reservations_customer ON point_reservations(customer_id);
 CREATE INDEX IF NOT EXISTS idx_point_reservations_order ON point_reservations(order_id);
 CREATE INDEX IF NOT EXISTS idx_point_reservations_status ON point_reservations(status);

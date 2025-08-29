@@ -1,4 +1,3 @@
-// com.eatcloud.adminservice.adapters.StoreDirectoryRestAdapter
 package com.eatcloud.adminservice.adapters;
 
 import com.eatcloud.adminservice.domain.admin.dto.StoreDto;

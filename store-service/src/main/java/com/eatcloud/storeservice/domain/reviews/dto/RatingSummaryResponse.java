@@ -6,8 +6,8 @@ import java.util.Map;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class RatingSummaryResponse {
-    private BigDecimal avgRating;          // 평균 별점
-    private int ratingCount;               // 리뷰 수
-    private BigDecimal rating30dAvg;       // 최근 30일 평균
-    private Map<Integer, Integer> histogram; // 1~5 별 카운트
+    private BigDecimal avgRating;
+    private int ratingCount;
+    private BigDecimal rating30dAvg;
+    private Map<Integer, Integer> histogram;
 }

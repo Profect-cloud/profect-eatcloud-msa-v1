@@ -22,8 +22,7 @@ public class KafkaConfig {
     
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
-    
-    // Producer 설정
+
     @Bean
     public ProducerFactory<String, OrderCreatedEvent> producerFactory() {
         Map<String, Object> configProps = new HashMap<>();
@@ -43,8 +42,7 @@ public class KafkaConfig {
     public KafkaTemplate<String, OrderCreatedEvent> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
     }
-    
-    // Consumer 설정
+
     @Bean
     public ConsumerFactory<String, PaymentCreatedEvent> consumerFactory() {
         Map<String, Object> configProps = new HashMap<>();

@@ -57,9 +57,9 @@ public class AiDescriptionService {
 
                         // ✅ 후처리: 카테고리와 줄바꿈 제거
                         return raw
-                                .replaceAll("\\s*\\(.*?\\)", "") // 괄호와 그 안의 내용 제거
-                                .replaceAll("\\n", "")           // 줄바꿈 제거
-                                .trim();                         // 앞뒤 공백 제거
+                                .replaceAll("\\s*\\(.*?\\)", "")
+                                .replaceAll("\\n", "")
+                                .trim();
                     } catch (Exception e) {
                         throw new AiDescriptionException(AiErrorCode.AI_RESPONSE_PARSING_FAILED, e);
                     }

@@ -1,12 +1,7 @@
 \c admin_db;
 
--- admin-service/db/data.sql
--- 확장 (필요 시)
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
---------------------------------------
--- 1) 상위 카테고리 p_store_categories
---------------------------------------
 INSERT INTO p_store_categories (
     name, code, sort_order,
     is_active, total_store_amount,
@@ -19,11 +14,6 @@ VALUES
     ('양식',   'WESTERN', 4, TRUE, 0, now(), 'system', now(), 'system')
 ON CONFLICT (code) DO NOTHING;
 
---------------------------------------
--- 2) 중간 카테고리 p_mid_categories
---    (INSERT ... SELECT 로 FK 안전 매핑)
---------------------------------------
--- 한식/밥류
 INSERT INTO p_mid_categories (
     store_category_id, name, code, sort_order,
     is_active, total_store_amount,
@@ -35,7 +25,6 @@ FROM p_store_categories s
 WHERE s.code = 'KOREAN'
 ON CONFLICT (code) DO NOTHING;
 
--- 한식/면류
 INSERT INTO p_mid_categories (
     store_category_id, name, code, sort_order,
     is_active, total_store_amount,
@@ -47,7 +36,6 @@ FROM p_store_categories s
 WHERE s.code = 'KOREAN'
 ON CONFLICT (code) DO NOTHING;
 
--- 중식/볶음류
 INSERT INTO p_mid_categories (
     store_category_id, name, code, sort_order,
     is_active, total_store_amount,
@@ -59,10 +47,6 @@ FROM p_store_categories s
 WHERE s.code = 'CHINESE'
 ON CONFLICT (code) DO NOTHING;
 
---------------------------------------
--- 3) 메뉴 카테고리 p_menu_categories
---------------------------------------
--- 한식/밥류 → 비빔밥
 INSERT INTO p_menu_categories (
     store_category_id, mid_category_id, name, code, sort_order,
     is_active, total_store_amount,
@@ -75,7 +59,6 @@ FROM p_store_categories s
 WHERE s.code = 'KOREAN'
 ON CONFLICT (code) DO NOTHING;
 
--- 한식/면류 → 칼국수
 INSERT INTO p_menu_categories (
     store_category_id, mid_category_id, name, code, sort_order,
     is_active, total_store_amount,
@@ -88,7 +71,6 @@ FROM p_store_categories s
 WHERE s.code = 'KOREAN'
 ON CONFLICT (code) DO NOTHING;
 
--- 중식/볶음류 → 짜장면
 INSERT INTO p_menu_categories (
     store_category_id, mid_category_id, name, code, sort_order,
     is_active, total_store_amount,
@@ -101,9 +83,6 @@ FROM p_store_categories s
 WHERE s.code = 'CHINESE'
 ON CONFLICT (code) DO NOTHING;
 
---------------------------------------
--- 4) 관리자 p_admins
---------------------------------------
 INSERT INTO p_admins (
     id, name, email, password, phone_number, position,
     created_at, created_by, updated_at, updated_by
@@ -115,10 +94,6 @@ VALUES
      now(), 'system', now(), 'system')
 ON CONFLICT (email) DO NOTHING;
 
---------------------------------------
--- 5) 매니저 가게 신청 p_manager_store_applications
---------------------------------------
--- 홍길동 (PENDING)
 INSERT INTO p_manager_store_applications (
     application_id,
     manager_name, manager_email, manager_password, manager_phone_number,
@@ -137,7 +112,6 @@ FROM p_store_categories s
 WHERE s.code = 'KOREAN'
 ON CONFLICT DO NOTHING;
 
--- 김철수 (APPROVED, reviewer = admin2@example.com)
 INSERT INTO p_manager_store_applications (
     application_id,
     manager_name, manager_email, manager_password, manager_phone_number,

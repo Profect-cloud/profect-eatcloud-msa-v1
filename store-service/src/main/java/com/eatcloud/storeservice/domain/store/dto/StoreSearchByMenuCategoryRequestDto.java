@@ -9,5 +9,5 @@ public class StoreSearchByMenuCategoryRequestDto {
     private String categoryCode;
     private double userLat;
     private double userLon;
-    private double distanceKm = 3.0; // 기본 거리 (km)
+    private double distanceKm = 3.0;
 }

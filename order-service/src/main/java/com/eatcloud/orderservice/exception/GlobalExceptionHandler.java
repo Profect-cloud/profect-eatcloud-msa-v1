@@ -63,8 +63,7 @@ public class GlobalExceptionHandler {
         log.error("Runtime exception occurred: {}", e.getMessage(), e);
         
         String message = e.getMessage();
-        
-        // 포인트 관련 예외 메시지 처리
+
         if (message != null) {
             if (message.contains("포인트가 부족합니다") || message.contains("포인트는 주문 총액을 초과할 수 없습니다")) {
                 return ResponseEntity

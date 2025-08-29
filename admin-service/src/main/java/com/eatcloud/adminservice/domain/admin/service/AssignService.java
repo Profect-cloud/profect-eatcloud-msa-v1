@@ -18,7 +18,6 @@ public class AssignService {
 
 	@Transactional
 	public ManagerStoreApplicationResponseDto newManagerStoreApply(ManagerStoreApplicationRequestDto req) {
-		// 1) 중복 검사
 		if (managerStoreApplicationRepository.existsByManagerEmail(req.getManagerEmail())) {
 			throw new AdminException(AdminErrorCode.APPLICATION_EMAIL_ALREADY_EXISTS);
 		}

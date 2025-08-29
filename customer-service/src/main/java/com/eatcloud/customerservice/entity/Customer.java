@@ -59,7 +59,6 @@ public class Customer extends BaseTimeEntity {
 	@Builder.Default
 	private List<Address> addresses = new ArrayList<>();
 
-	// 포인트 관련 메서드들
 	public void reservePoints(Integer pointsToReserve) {
 		if (pointsToReserve == null || pointsToReserve <= 0) {
 			throw new IllegalArgumentException("예약할 포인트는 0보다 커야 합니다.");
@@ -76,9 +75,6 @@ public class Customer extends BaseTimeEntity {
 		if (pointsToDeduct == null || pointsToDeduct <= 0) {
 			throw new IllegalArgumentException("차감할 포인트는 0보다 커야 합니다.");
 		}
-		
-		// 예약된 포인트는 이미 차감되어 있으므로 추가 차감하지 않음
-		// 이 메서드는 예약된 포인트를 실제로 처리 완료 상태로 만드는 용도
 	}
 	
 	public void addPoints(Integer pointsToAdd) {

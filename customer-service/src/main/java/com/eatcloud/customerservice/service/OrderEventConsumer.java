@@ -29,8 +29,7 @@ public class OrderEventConsumer {
     public void handleOrderCreated(String eventJson) {
         try {
             log.info("주문 생성 이벤트 수신 (JSON): {}", eventJson);
-            
-            // JSON 문자열을 OrderCreatedEvent로 파싱
+
             OrderCreatedEvent event = objectMapper.readValue(eventJson, OrderCreatedEvent.class);
             
             log.info("주문 생성 이벤트 파싱 완료: orderId={}, customerId={}, pointsToUse={}",
@@ -41,7 +40,6 @@ public class OrderEventConsumer {
                 return;
             }
 
-            // 포인트 예약 생성
             PointReservation reservation = pointReservationService.createReservation(
                     event.getCustomerId(),
                     event.getOrderId(),
@@ -53,11 +51,10 @@ public class OrderEventConsumer {
 
         } catch (JsonProcessingException e) {
             log.error("주문 생성 이벤트 JSON 파싱 실패: eventJson={}", eventJson, e);
-            // JSON 파싱 실패는 트랜잭션 롤백하지 않음
         } catch (Exception e) {
             log.error("주문 생성 이벤트 처리 실패: eventJson={}", eventJson, e);
             // TODO: Dead Letter Queue 구현 필요
-            throw e; // 트랜잭션 롤백을 위해 예외 재발생
+            throw e;
         }
     }
 } 

@@ -8,5 +8,5 @@ import com.eatcloud.autoresponse.config.AutoResponseConfiguration;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@Import(AutoResponseConfiguration.class)  // ← 이 설정만 다른 모듈에서 import
+@Import(AutoResponseConfiguration.class)
 public @interface EnableAutoResponse {}

@@ -50,7 +50,6 @@ public class Menu extends BaseTimeEntity {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
-    // ⭐ 재고 관리(스키마 반영)
     @Column(name = "is_unlimited", nullable = false)
     @Builder.Default
     private Boolean isUnlimited = false;

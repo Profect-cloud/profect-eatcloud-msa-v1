@@ -39,44 +39,27 @@ public class OrderService {
     private final DistributedLockService distributedLockService;
     private final OrderEventProducer orderEventProducer;
     @Lazy
-    // private final SagaOrchestrator sagaOrchestrator;
 
     @Autowired
     private CartService cartService;
 
-
-    /**
-     * 장바구니에서 주문 생성 - Saga 패턴 적용
-     * 분산 트랜잭션으로 처리하여 일관성 보장
-     */
-    // public CreateOrderResponse createOrderFromCart(UUID customerId, CreateOrderRequest request) {
-    //     // Saga 패턴을 통한 분산 트랜잭션 처리
-    //     return sagaOrchestrator.createOrderSaga(customerId, request);
-    // }
-
-    /**
-     * 레거시 메서드 - 단순 분산락만 사용하는 버전
-     * (하위 호환성을 위해 유지)
-     */
     public CreateOrderResponse createOrderFromCartSimple(UUID customerId, CreateOrderRequest request, String bearerToken) {
         String lockKey = "order:create:" + customerId;
         
         try {
             return distributedLockService.executeWithLock(
                 lockKey,
-                5,  // 5초 대기
-                10, // 10초 유지
+                5,
+                10,
                 TimeUnit.SECONDS,
                 () -> {
                     log.info("Starting order creation for customer: {}", customerId);
 
-                    // 장바구니 조회
                     List<CartItem> cartItems = cartService.getCart(customerId);
                     if (cartItems.isEmpty()) {
                         throw new OrderException(ErrorCode.EMPTY_CART);
                     }
 
-                    // 장바구니 아이템을 주문 메뉴로 변환
                     List<OrderMenu> orderMenuList = cartItems.stream()
                         .map(item -> OrderMenu.builder()
                             .menuId(item.getMenuId())
@@ -86,7 +69,6 @@ public class OrderService {
                             .build())
                         .collect(Collectors.toList());
 
-                    // 주문 생성
                     Order order = createPendingOrder(
                         customerId,
                         request.getStoreId(),
@@ -97,7 +79,6 @@ public class OrderService {
                         bearerToken
                     );
 
-                    // 이벤트 발행 (주문 생성)
                     try {
                         com.eatcloud.orderservice.event.OrderCreatedEvent event =
                             com.eatcloud.orderservice.event.OrderCreatedEvent.builder()
@@ -121,7 +102,6 @@ public class OrderService {
                         log.error("주문 생성 이벤트 발행 실패: orderId={}", order.getOrderId(), publishEx);
                     }
 
-                    // 장바구니 비우기
                     try {
                         cartService.clearCart(customerId);
                         log.info("Cart cleared for customer: {}", customerId);
@@ -143,8 +123,7 @@ public class OrderService {
             );
         } catch (Exception e) {
             log.error("Order creation failed for customer: {}", customerId, e);
-            
-            // 포인트 검증 실패인 경우 원본 예외 메시지 유지
+
             if (e.getMessage() != null && (
                 e.getMessage().contains("포인트가 부족합니다") ||
                 e.getMessage().contains("포인트는 주문 총액을 초과할 수 없습니다") ||
@@ -152,7 +131,7 @@ public class OrderService {
                 e.getMessage().contains("사용자 포인트를 조회할 수 없습니다") ||
                 e.getMessage().contains("Customer service is temporarily unavailable")
             )) {
-                throw new RuntimeException(e.getMessage(), e); // 포인트 관련 예외는 RuntimeException으로 래핑
+                throw new RuntimeException(e.getMessage(), e);
             }
             
             if (e instanceof OrderException) {
@@ -182,8 +161,6 @@ public class OrderService {
                             orderMenu.getMenuId(), orderMenu.getPrice());
                 }
             } catch (Exception e) {
-                // log.error("Failed to get menu price for menuId: {}", orderMenu.getMenuId(), e);
-                // throw new RuntimeException("메뉴 가격을 조회할 수 없습니다: " + orderMenu.getMenuId());
                 log.warn("Store-service unavailable. Fallback to cart price for menuId: {}. reason={}",
                         orderMenu.getMenuId(), e.getMessage());
             }
@@ -198,10 +175,8 @@ public class OrderService {
             pointsToUse = 0;
         }
 
-        // 포인트 사용 검증 로직 추가
         if (usePoints && pointsToUse > 0) {
             try {
-                // CustomerService에서 사용자 포인트 조회 (토큰 전달)
                 Integer customerPoints = externalApiService.getCustomerPoints(customerId, bearerToken);
                 
                 if (customerPoints == null) {
@@ -263,13 +238,11 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: " + orderId));
 
-        // 이미 PAID 상태면 중복 처리 방지 (멱등성 보장)
         if ("PAID".equals(order.getOrderStatusCode().getCode())) {
             log.warn("주문이 이미 결제 완료 상태입니다: orderId={}, paymentId={}", orderId, paymentId);
             return;
         }
 
-        // PENDING 상태가 아니면 결제 완료 불가
         if (!"PENDING".equals(order.getOrderStatusCode().getCode())) {
             log.error("결제 완료할 수 없는 주문 상태: orderId={}, currentStatus={}",
                      orderId, order.getOrderStatusCode().getCode());
@@ -290,7 +263,6 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: " + orderId));
 
-        // PENDING 상태가 아니면 결제 실패 처리 불가
         if (!"PENDING".equals(order.getOrderStatusCode().getCode())) {
             log.warn("결제 실패 처리할 수 없는 주문 상태: orderId={}, currentStatus={}",
                     orderId, order.getOrderStatusCode().getCode());

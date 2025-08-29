@@ -48,11 +48,10 @@ public class OrderController {
 
 		try {
 			UUID customerId = UUID.fromString(jwt.getSubject());
-			
-			// Authorization 헤더에서 Bearer 토큰 추출
+
 			String bearerToken = null;
 			if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-				bearerToken = authorizationHeader.substring(7); // "Bearer " 제거
+				bearerToken = authorizationHeader.substring(7);
 			}
 			
 			CreateOrderResponse response = orderService.createOrderFromCartSimple(customerId, request, bearerToken);
@@ -62,7 +61,6 @@ public class OrderController {
 			return ResponseEntity.badRequest()
 				.body(ApiResponse.error("유효하지 않은 사용자 ID입니다."));
 		}
-		// OrderException과 CartException은 GlobalExceptionHandler에서 처리
 	}
 
 	@GetMapping("/{orderId}")
@@ -168,7 +166,6 @@ public class OrderController {
 		return ResponseEntity.noContent().build();
 	}
 
-	// ===== Payment Service 콜백 엔드포인트들 =====
 
 	@PostMapping("/{orderId}/payment/complete")
 	public ResponseEntity<Map<String, Object>> completePayment(
@@ -179,7 +176,6 @@ public class OrderController {
 		Map<String, Object> response = new HashMap<>();
 
 		try {
-			// Payment Service에서만 호출 허용
 			if (!"payment-service".equals(serviceName)) {
 				log.warn("Unauthorized payment completion attempt from: {}", serviceName);
 				response.put("error", "Unauthorized service");
@@ -212,7 +208,6 @@ public class OrderController {
 		Map<String, Object> response = new HashMap<>();
 
 		try {
-			// Payment Service에서만 호출 허용
 			if (!"payment-service".equals(serviceName)) {
 				log.warn("Unauthorized payment failure attempt from: {}", serviceName);
 				response.put("error", "Unauthorized service");
@@ -244,7 +239,6 @@ public class OrderController {
 		Map<String, Object> response = new HashMap<>();
 
 		try {
-			// Payment Service에서만 호출 허용
 			if (!"payment-service".equals(serviceName)) {
 				log.warn("Unauthorized payment cancellation attempt from: {}", serviceName);
 				response.put("error", "Unauthorized service");

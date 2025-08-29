@@ -1,7 +1,5 @@
 \c order_db;
 
--- order-service/data.sql
--- 주문 상태 코드 초기 데이터
 INSERT INTO order_status_codes (is_active, sort_order, code, display_name, created_at, created_by, updated_at, updated_by) 
 VALUES 
     (true, 1, 'PENDING', '대기중', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP, 'system'),
@@ -11,7 +9,7 @@ VALUES
     (true, 5, 'COMPLETED', '완료', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP, 'system'),
     (true, 6, 'CANCELLED', '취소', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP, 'system');
 
--- 주문 타입 코드 초기 데이터
+
 INSERT INTO order_type_codes (is_active, sort_order, code, display_name, created_at, created_by, updated_at, updated_by) 
 VALUES 
     (true, 1, 'DELIVERY', '배달', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP, 'system'),

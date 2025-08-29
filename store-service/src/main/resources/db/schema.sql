@@ -1,16 +1,13 @@
--- PostGIS for geography/point
+
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
--- =====================
--- Stores
--- =====================
 CREATE TABLE IF NOT EXISTS p_stores (
   store_id         UUID PRIMARY KEY,
   store_name       VARCHAR(200) NOT NULL,
   store_address    VARCHAR(300),
   phone_number     VARCHAR(18),
-  store_category_id INT NOT NULL,                  -- logical ref -> admin.p_store_categories.id (top-level)
+  store_category_id INT NOT NULL,
   application_id   UUID UNIQUE,
   manager_id       UUID,
   min_cost         INTEGER NOT NULL DEFAULT 0,
@@ -23,11 +20,11 @@ CREATE TABLE IF NOT EXISTS p_stores (
   location         geography(Point, 4326),
 
   -- ⭐ Ratings (denormalized)
-  rating_sum       NUMERIC(10,2) NOT NULL DEFAULT 0,   -- 총합
-  rating_count     INTEGER       NOT NULL DEFAULT 0,    -- 개수
-  avg_rating       NUMERIC(3,2)  NOT NULL DEFAULT 0,    -- 평균
+  rating_sum       NUMERIC(10,2) NOT NULL DEFAULT 0,
+  rating_count     INTEGER       NOT NULL DEFAULT 0,
+  avg_rating       NUMERIC(3,2)  NOT NULL DEFAULT 0,
 
-  -- audit / soft delete
+
   created_at       TIMESTAMP     NOT NULL DEFAULT now(),
   created_by       VARCHAR(100)  NOT NULL,
   updated_at       TIMESTAMP     NOT NULL DEFAULT now(),
@@ -39,9 +36,6 @@ CREATE TABLE IF NOT EXISTS p_stores (
 CREATE INDEX IF NOT EXISTS idx_stores_rating
   ON p_stores (avg_rating DESC, rating_count DESC);
 
--- =====================
--- Menus (with inventory)
--- =====================
 CREATE TABLE IF NOT EXISTS p_menus (
   menu_id            UUID PRIMARY KEY,
   store_id           UUID NOT NULL REFERENCES p_stores(store_id),
@@ -53,9 +47,9 @@ CREATE TABLE IF NOT EXISTS p_menus (
   is_available       BOOLEAN NOT NULL DEFAULT TRUE,
   image_url          VARCHAR(500),
 
-  -- ⭐ Inventory
-  is_unlimited       BOOLEAN NOT NULL DEFAULT FALSE,   -- 무제한 판매 여부
-  stock_quantity     INTEGER NOT NULL DEFAULT 0,       -- 현재 재고 수량
+
+  is_unlimited       BOOLEAN NOT NULL DEFAULT FALSE,
+  stock_quantity     INTEGER NOT NULL DEFAULT 0,
 
   created_at         TIMESTAMP    NOT NULL DEFAULT now(),
   created_by         VARCHAR(100) NOT NULL,
@@ -81,9 +75,6 @@ CREATE TABLE IF NOT EXISTS menu_vectors (
 CREATE INDEX IF NOT EXISTS idx_menu_vectors_name
   ON menu_vectors (menu_name);
 
--- =====================
--- Delivery areas
--- =====================
 CREATE TABLE IF NOT EXISTS delivery_areas (
   area_id     UUID PRIMARY KEY,
   area_name   VARCHAR(100) NOT NULL,
@@ -108,12 +99,10 @@ CREATE TABLE IF NOT EXISTS p_store_delivery_areas (
   PRIMARY KEY (store_id, area_id)
 );
 
--- =====================
--- Daily sales (store / menu)
--- =====================
+
 CREATE TABLE IF NOT EXISTS daily_store_sales (
   sale_date    DATE NOT NULL,
-  store_id     UUID NOT NULL, -- logical ref -> p_stores.store_id
+  store_id     UUID NOT NULL,
   order_count  INTEGER NOT NULL,
   total_amount NUMERIC(12,2) NOT NULL,
   created_at   TIMESTAMP    NOT NULL DEFAULT now(),
@@ -129,8 +118,8 @@ CREATE INDEX IF NOT EXISTS idx_daily_store_sales_store
 
 CREATE TABLE IF NOT EXISTS daily_menu_sales (
   sale_date     DATE NOT NULL,
-  store_id      UUID NOT NULL, -- logical ref -> p_stores.store_id
-  menu_id       UUID NOT NULL, -- logical ref -> p_menus.menu_id
+  store_id      UUID NOT NULL,
+  menu_id       UUID NOT NULL,
   quantity_sold INTEGER NOT NULL,
   total_amount  NUMERIC(12,2) NOT NULL,
   created_at    TIMESTAMP    NOT NULL DEFAULT now(),
@@ -144,9 +133,7 @@ CREATE TABLE IF NOT EXISTS daily_menu_sales (
 CREATE INDEX IF NOT EXISTS idx_daily_menu_sales_store_date
   ON daily_menu_sales (store_id, sale_date);
 
--- =====================
--- AI Responses
--- =====================
+
 CREATE TABLE IF NOT EXISTS p_ai_responses (
   ai_response_id UUID PRIMARY KEY,
   description    TEXT NOT NULL,

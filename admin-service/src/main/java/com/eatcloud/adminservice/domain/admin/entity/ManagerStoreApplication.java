@@ -23,7 +23,6 @@ public class ManagerStoreApplication extends BaseTimeEntity {
 	@GeneratedValue(strategy = GenerationType.AUTO)
 	private UUID applicationId;
 
-	// Manager 신청 정보
 	@Column(name = "manager_name", length = 20, nullable = false)
 	private String managerName;
 
@@ -36,7 +35,6 @@ public class ManagerStoreApplication extends BaseTimeEntity {
 	@Column(name = "manager_phone_number", length = 18)
 	private String managerPhoneNumber;
 
-	// Store 신청 정보
 	@Column(name = "store_name", length = 200, nullable = false)
 	private String storeName;
 
@@ -46,13 +44,12 @@ public class ManagerStoreApplication extends BaseTimeEntity {
 	@Column(name = "store_phone_number", length = 18)
 	private String storePhoneNumber;
 
-	@Column(name = "store_category_id")   // ★ 컬럼명만 정확히 매핑
+	@Column(name = "store_category_id")
 	private Integer categoryId;
 
 	@Column(name = "description", columnDefinition = "TEXT")
 	private String description;
 
-	// 심사 상태
 	@Column(name = "status", length = 20, nullable = false)
 	private String status;
 

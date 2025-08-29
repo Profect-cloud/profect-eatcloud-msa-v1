@@ -1,12 +1,8 @@
 \c store_db;
 
--- store/data.sql (final version with all audit columns)
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS postgis;
 
------------------------------
--- 매장 (p_stores)
------------------------------
 INSERT INTO p_stores (
     store_id, application_id, manager_id,
     store_name, store_address, phone_number,
@@ -87,9 +83,6 @@ VALUES
      0, 0, 0,
      now(), 'system', now(), 'system');
 
------------------------------
--- 메뉴 (p_menus) - 재고 컬럼 포함
------------------------------
 INSERT INTO p_menus (
     menu_id, store_id, menu_num, menu_name, menu_category_code,
     price, description, is_available, image_url,
@@ -328,9 +321,6 @@ VALUES
      FALSE, 35,
      now(),'system',now(),'system');
 
------------------------------
--- 배달 지역 (delivery_areas)
------------------------------
 INSERT INTO delivery_areas (area_id, area_name, created_at, created_by, updated_at, updated_by)
 VALUES
     (gen_random_uuid(), '종로구', now(),'system',now(),'system'),
@@ -338,9 +328,6 @@ VALUES
     (gen_random_uuid(), '강남구', now(),'system',now(),'system'),
     (gen_random_uuid(), '서초구', now(),'system',now(),'system');
 
------------------------------
--- 매장-배달지역 매핑 (p_store_delivery_areas)
------------------------------
 INSERT INTO p_store_delivery_areas (
     store_id, area_id, delivery_fee,
     created_at, created_by, updated_at, updated_by
@@ -377,16 +364,10 @@ VALUES
      (SELECT area_id FROM delivery_areas WHERE area_name='종로구'), 2500,
      now(),'system',now(),'system');
 
------------------------------
--- AI Response 샘플
------------------------------
 INSERT INTO p_ai_responses (ai_response_id, description, created_at, created_by, updated_at, updated_by)
 VALUES
     (gen_random_uuid(), '메뉴 설명 자동 생성 결과 샘플', now(),'system',now(),'system');
 
------------------------------
--- 일별 매장 매출 (daily_store_sales)
------------------------------
 INSERT INTO daily_store_sales (
     sale_date, store_id, order_count, total_amount,
     created_at, created_by, updated_at, updated_by
@@ -423,9 +404,6 @@ VALUES
      (SELECT store_id FROM p_stores WHERE store_name='고기집'),
      10, 250000, now(),'system',now(),'system');
 
------------------------------
--- 일별 메뉴 매출 (daily_menu_sales)
------------------------------
 INSERT INTO daily_menu_sales (
     sale_date, store_id, menu_id, quantity_sold, total_amount,
     created_at, created_by, updated_at, updated_by
@@ -476,9 +454,6 @@ VALUES
      (SELECT menu_id FROM p_menus WHERE menu_name='소고기 스테이크'),
      10, 250000, now(),'system',now(),'system');
 
------------------------------
--- 메뉴 벡터 (menu_vectors) - TF-IDF 벡터 데이터
------------------------------
 INSERT INTO menu_vectors (menu_name, tfidf_vector) VALUES
     ('비빔밥', '{"비빔밥": 1.0}'),
     ('김치찌개', '{"김치찌개": 1.0}'),

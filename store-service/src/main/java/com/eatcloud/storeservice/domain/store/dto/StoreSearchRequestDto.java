@@ -11,5 +11,5 @@ public class StoreSearchRequestDto {
     private UUID categoryId;
     private double userLat;
     private double userLon;
-    private double distanceKm = 3.0; // 기본값
+    private double distanceKm = 3.0;
 }

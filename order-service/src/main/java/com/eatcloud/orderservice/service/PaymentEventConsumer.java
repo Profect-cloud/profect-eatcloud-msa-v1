@@ -33,7 +33,6 @@ public class PaymentEventConsumer {
 
         } catch (Exception e) {
             log.error("결제 생성 이벤트 처리 실패: orderId={}", event.getOrderId(), e);
-            // 실제 운영에서는 Dead Letter Queue나 재시도 로직을 구현해야 합니다.
         }
     }
 } 

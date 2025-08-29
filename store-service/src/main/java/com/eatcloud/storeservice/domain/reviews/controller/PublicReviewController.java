@@ -19,7 +19,6 @@ public class PublicReviewController {
 
     private final PublicReviewQueryService service;
 
-    /** 가게 리뷰 목록 */
     @GetMapping("/{storeId}/reviews")
     public PublicReviewListResponse list(
             @PathVariable UUID storeId,
@@ -33,7 +32,6 @@ public class PublicReviewController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt,desc") String sort
     ) {
-        // sort 파싱 (예: createdAt,desc)
         String[] sp = sort.split(",", 2);
         String prop = sp[0];
         Sort.Direction dir = (sp.length > 1 && "asc".equalsIgnoreCase(sp[1]))
@@ -50,7 +48,6 @@ public class PublicReviewController {
         return service.list(storeId, filter, pageable);
     }
 
-    /** 가게 리뷰 요약만 */
     @GetMapping("/{storeId}/ratings/summary")
     public RatingSummaryResponse summary(@PathVariable UUID storeId) {
         return service.summary(storeId);
