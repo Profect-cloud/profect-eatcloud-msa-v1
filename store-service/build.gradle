@@ -29,6 +29,8 @@ repositories {
 dependencies {
     implementation 'org.hibernate.orm:hibernate-spatial'
     implementation 'org.apache.commons:commons-math3:3.6.1'
+    implementation project(':auto-time')
+    implementation project(':auto-response')
 
 }
 tasks.named('test') {

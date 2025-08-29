@@ -27,6 +27,8 @@ repositories {
 
 dependencies {
     implementation("org.springframework.security:spring-security-oauth2-jose")
+    implementation project(':auto-time')
+    implementation project(':auto-response')
 }
 
 tasks.named('test') {

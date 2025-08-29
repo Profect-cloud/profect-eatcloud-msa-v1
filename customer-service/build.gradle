@@ -25,6 +25,11 @@ repositories {
     mavenCentral()
 }
 
+dependencies {
+    implementation project(':auto-time')
+    implementation project(':auto-response')
+}
+
 tasks.named('test') {
     useJUnitPlatform()
 }

@@ -36,6 +36,9 @@ dependencies {
 	testImplementation 'org.testcontainers:postgresql'
 	testImplementation 'org.springframework.boot:spring-boot-starter-webflux'
 	testImplementation 'com.h2database:h2'
+	implementation project(':auto-time')
+	implementation project(':auto-response')
+
 }
 
 tasks.named('test') {

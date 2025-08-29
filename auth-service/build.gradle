@@ -27,6 +27,8 @@ repositories {
 
 dependencies {
     implementation 'com.nimbusds:nimbus-jose-jwt:9.37.3'
+    implementation project(':auto-time')
+    implementation project(':auto-response')
 }
 
 tasks.named('test') {
