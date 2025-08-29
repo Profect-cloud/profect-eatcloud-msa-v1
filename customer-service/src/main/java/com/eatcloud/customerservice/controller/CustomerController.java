@@ -116,7 +116,7 @@ public class CustomerController {
 		return ResponseEntity.ok(userDto);
 	}
 
-	@Operation(summary = "5. 고객 회원가입", description = "새로운 고객을 등록합니다. 포인트는 선택사항이며, 입력하지 않으면 기본값 0으로 설정됩니다.")
+	@Operation(summary = "5. 고객 회원가입", description = "새로운 고객을 등록합니다.")
 	@ApiResponses({
 		@ApiResponse(responseCode = "200", description = "회원가입 성공"),
 		@ApiResponse(responseCode = "400", description = "잘못된 요청 데이터"),

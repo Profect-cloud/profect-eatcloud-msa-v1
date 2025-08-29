@@ -19,6 +19,7 @@ import org.hibernate.annotations.SQLRestriction;
 public class Manager extends BaseTimeEntity{
 
 	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
 	private UUID id;
 
 	@Column(nullable = false, unique = true, length = 255)

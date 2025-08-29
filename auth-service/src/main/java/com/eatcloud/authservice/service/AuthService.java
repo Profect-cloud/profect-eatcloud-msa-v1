@@ -3,6 +3,7 @@ package com.eatcloud.authservice.service;
 import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 
+import com.eatcloud.authservice.dto.SignupRequestDto;
 import com.eatcloud.authservice.dto.UserDto;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.mail.MailException;
@@ -12,7 +13,6 @@ import org.springframework.stereotype.Service;
 
 import com.eatcloud.authservice.dto.LoginResponseDto;
 import com.eatcloud.authservice.dto.SignupRedisData;
-import com.eatcloud.authservice.dto.SignupRequestDto;
 import com.eatcloud.authservice.jwt.JwtTokenProvider;
 import org.springframework.web.client.RestTemplate;
 
@@ -95,8 +95,15 @@ public class AuthService {
 
 	// 2) 회원가입 (Customer 예시)
 	public void tempSignup(SignupRequestDto req) {
-		if (getCustomerByEmail(req.getEmail()) != null) {
-			throw new RuntimeException("이미 존재하는 이메일입니다.");
+		// role에 따라 중복 검사
+		if ("manager".equals(req.getRole())) {
+			if (getManagerByEmail(req.getEmail()) != null) {
+				throw new RuntimeException("이미 존재하는 이메일입니다.");
+			}
+		} else {
+			if (getCustomerByEmail(req.getEmail()) != null) {
+				throw new RuntimeException("이미 존재하는 이메일입니다.");
+			}
 		}
 
 		String verificationCode = java.util.UUID.randomUUID().toString().substring(0, 6);
@@ -116,7 +123,7 @@ public class AuthService {
 			.name(req.getName())
 			.nickname(req.getNickname())
 			.phone(req.getPhone())
-			.points(req.getPoints()) // 포인트 추가
+			.role(req.getRole())
 			.build();
 
 		SignupRedisData data = new SignupRedisData(encodedReq, verificationCode);
@@ -134,26 +141,53 @@ public class AuthService {
 			throw new RuntimeException("인증 코드가 일치하지 않습니다.");
 		}
 
-		restTemplate.postForObject("http://customer-service/api/v1/customers/signup", data.getRequest(), Void.class);
+		// role에 따라 적절한 서비스로 회원가입 요청
+		if ("manager".equals(data.getRequest().getRole())) {
+			// SignupRequestDto를 그대로 전달 (nickname 포함)
+			restTemplate.postForObject("http://manager-service/api/v1/managers/signup", data.getRequest(), Void.class);
+		} else {
+			// customer 회원가입 (기본값)
+			restTemplate.postForObject("http://customer-service/api/v1/customers/signup", data.getRequest(), Void.class);
+		}
+		
 		redisTemplate.delete(key);
 	}
 
 	public void signupWithoutEmailVerification(SignupRequestDto req) {
-		if (getCustomerByEmail(req.getEmail()) != null) {
-			throw new RuntimeException("이미 존재하는 이메일입니다.");
+		// role이 manager인 경우 manager-service로, customer인 경우 customer-service로 요청
+		if ("manager".equals(req.getRole())) {
+			// manager 회원가입
+			if (getManagerByEmail(req.getEmail()) != null) {
+				throw new RuntimeException("이미 존재하는 이메일입니다.");
+			}
+
+			// SignupRequestDto를 그대로 전달 (nickname 제외)
+			SignupRequestDto managerReq = SignupRequestDto.builder()
+				.email(req.getEmail())
+				.password(passwordEncoder.encode(req.getPassword()))
+				.name(req.getName())
+				.phone(req.getPhone())
+				.role(req.getRole())
+				.build();
+
+			restTemplate.postForObject("http://manager-service/api/v1/managers/signup", managerReq, Void.class);
+		} else {
+			// customer 회원가입 (기본값)
+			if (getCustomerByEmail(req.getEmail()) != null) {
+				throw new RuntimeException("이미 존재하는 이메일입니다.");
+			}
+
+			SignupRequestDto encodedReq = SignupRequestDto.builder()
+				.email(req.getEmail())
+				.password(passwordEncoder.encode(req.getPassword()))
+				.name(req.getName())
+				.nickname(req.getNickname())
+				.phone(req.getPhone())
+				.role("customer")
+				.build();
+
+			restTemplate.postForObject("http://customer-service/api/v1/customers/signup", encodedReq, Void.class);
 		}
-
-		SignupRequestDto encodedReq = SignupRequestDto.builder()
-			.email(req.getEmail())
-			.password(passwordEncoder.encode(req.getPassword()))
-			.name(req.getName())
-			.nickname(req.getNickname())
-			.phone(req.getPhone())
-			.points(req.getPoints()) // 포인트 추가
-			.build();
-
-		// Gateway에 회원가입 요청
-		restTemplate.postForObject("http://customer-service/api/v1/customers/signup", encodedReq, Void.class);
 	}
 
 	private UserDto getCustomerByEmail(String email) {
@@ -165,6 +199,20 @@ public class AuthService {
 			if (customer != null) {
 				customer.setRole("customer");
 				return customer;
+			}
+		} catch (Exception ignored) {}
+		return null;
+	}
+
+	private UserDto getManagerByEmail(String email) {
+		try {
+			UserDto manager = restTemplate.getForObject(
+					"http://manager-service/api/v1/manager/search?email=" + email,
+					UserDto.class
+			);
+			if (manager != null) {
+				manager.setRole("manager");
+				return manager;
 			}
 		} catch (Exception ignored) {}
 		return null;

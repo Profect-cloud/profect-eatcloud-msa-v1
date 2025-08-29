@@ -139,8 +139,8 @@ public class CustomerService {
 	@Transactional
 	public void signup(SignupRequestDto request) {
 		log.info("=== 회원가입 시작 ===");
-		log.info("요청 데이터: email={}, name={}, nickname={}, phone={}, points={}", 
-			request.getEmail(), request.getName(), request.getNickname(), request.getPhone(), request.getPoints());
+		log.info("요청 데이터: email={}, name={}, nickname={}, phone={}, role={}", 
+			request.getEmail(), request.getName(), request.getNickname(), request.getPhone(), request.getRole());
 		
 		try {
 			Customer customer = new Customer();
@@ -150,9 +150,8 @@ public class CustomerService {
 			customer.setNickname(request.getNickname());
 			customer.setPhoneNumber(request.getPhone());
 			
-			// 회원가입 시 포인트 설정 (기본값 0)
-			Integer points = request.getPoints() != null ? request.getPoints() : 0;
-			customer.setPoints(points);
+			// 회원가입 시 포인트는 기본값 0으로 설정
+			customer.setPoints(0);
 			
 			log.info("Customer 엔티티 생성 완료: {}", customer);
 			
@@ -163,7 +162,7 @@ public class CustomerService {
 			Customer foundCustomer = customerRepository.findById(savedCustomer.getId()).orElse(null);
 			log.info("저장된 데이터 재확인: foundCustomer={}", foundCustomer);
 			
-			log.info("=== 회원가입 완료 (포인트: {}) ===", points);
+			log.info("=== 회원가입 완료 ===");
 		} catch (Exception e) {
 			log.error("=== 회원가입 실패 ===");
 			log.error("오류 발생: {}", e.getMessage(), e);
