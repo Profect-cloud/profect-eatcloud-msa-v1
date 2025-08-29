@@ -13,14 +13,12 @@ import java.util.UUID;
 @NoArgsConstructor
 public class CreateOrderRequest {
     private UUID storeId;
-    private String orderType; // DELIVERY or PICKUP
+    private String orderType;
     private Boolean usePoints;
     private Integer pointsToUse;
-    
-    // Delivery 주문인 경우
+
     private String deliveryAddress;
     private String deliveryRequests;
-    
-    // Pickup 주문인 경우
+
     private String pickupRequests;
 }

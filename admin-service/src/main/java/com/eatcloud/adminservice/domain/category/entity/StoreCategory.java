@@ -1,4 +1,3 @@
-// StoreCategory.java
 package com.eatcloud.adminservice.domain.category.entity;
 
 import jakarta.persistence.Column;

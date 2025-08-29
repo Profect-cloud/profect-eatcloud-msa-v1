@@ -1,4 +1,3 @@
-// store-service / external/admin/dto/CategoryDto.java
 package com.eatcloud.storeservice.external.admin.dto;
 
 import lombok.Data;

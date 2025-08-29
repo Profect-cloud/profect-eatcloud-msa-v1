@@ -13,9 +13,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Service;
 
-/**
- * 내부 시스템 간 통신에 사용하는 단명 Passport JWT 발급 및 JWKS 제공 서비스.
- */
 @Service
 public class PassportTokenService {
 
@@ -25,10 +22,6 @@ public class PassportTokenService {
     public PassportTokenService() {
         rotateKey();
     }
-
-    /**
-     * 키 로테이션: 새 RSA 키를 생성하고 current kid를 교체한다.
-     */
     public synchronized void rotateKey() {
         try {
             RSAKey rsaJWK = new RSAKeyGenerator(2048)
@@ -78,9 +71,6 @@ public class PassportTokenService {
         }
     }
 
-    /**
-     * 공개키 세트를 JWKS로 반환한다.
-     */
     public Map<String, Object> getJwks() {
         List<JWK> publicKeys = keyIdToRsaKey.values().stream()
             .map(RSAKey::toPublicJWK)

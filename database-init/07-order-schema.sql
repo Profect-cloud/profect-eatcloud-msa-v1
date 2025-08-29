@@ -1,8 +1,5 @@
 \c order_db;
 
--- orders/schema.sql
-
--- 기존 테이블 삭제 (순서 주의: 외래키 참조 순서대로)
 DROP TABLE IF EXISTS p_reviews CASCADE;
 DROP TABLE IF EXISTS p_delivery_orders CASCADE;
 DROP TABLE IF EXISTS p_pickup_orders CASCADE;
@@ -13,7 +10,7 @@ DROP TABLE IF EXISTS order_status_codes CASCADE;
 
 CREATE TABLE IF NOT EXISTS p_cart (
     cart_id     UUID PRIMARY KEY,
-    customer_id UUID NOT NULL, -- logical ref -> users.p_customer.id
+    customer_id UUID NOT NULL,
     cart_items  JSONB NOT NULL,
     created_at  TIMESTAMP    NOT NULL DEFAULT now(),
     created_by  VARCHAR(100) NOT NULL,
@@ -26,9 +23,9 @@ CREATE TABLE IF NOT EXISTS p_cart (
 CREATE TABLE IF NOT EXISTS p_orders (
                                         order_id              UUID PRIMARY KEY,
                                         order_number          VARCHAR(50) UNIQUE NOT NULL,
-    customer_id           UUID NOT NULL, -- logical ref -> users.p_customer.id
-    store_id              UUID NOT NULL, -- logical ref -> stores.p_stores.store_id
-    payment_id            UUID,          -- logical ref -> payments.p_payments.payment_id
+    customer_id           UUID NOT NULL,
+    store_id              UUID NOT NULL,
+    payment_id            UUID,
     order_status          VARCHAR(30) NOT NULL,
     order_type            VARCHAR(30) NOT NULL,
     order_menu_list       JSONB NOT NULL,
@@ -92,7 +89,6 @@ CREATE TABLE IF NOT EXISTS p_reviews (
     deleted_by VARCHAR(100)
     );
 
--- 주문 상태 코드 테이블
 CREATE TABLE IF NOT EXISTS order_status_codes (
     code VARCHAR(30) PRIMARY KEY,
     display_name VARCHAR(50) NOT NULL,
@@ -106,7 +102,6 @@ CREATE TABLE IF NOT EXISTS order_status_codes (
     deleted_by VARCHAR(100)
 );
 
--- 주문 타입 코드 테이블
 CREATE TABLE IF NOT EXISTS order_type_codes (
     code VARCHAR(30) PRIMARY KEY,
     display_name VARCHAR(50) NOT NULL,

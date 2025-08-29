@@ -6,7 +6,6 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>토스페이먼츠 결제</title>
-    <!-- 토스페이먼츠 표준 결제 SDK -->
     <script src="https://js.tosspayments.com/v2/standard"></script>
     <style>
         * {
@@ -229,7 +228,6 @@
         </div>
         
         <div class="content">
-            <!-- 주문 정보 -->
             <div class="order-info">
                 <h3>📋 주문 정보</h3>
                 <div class="info-row">
@@ -245,14 +243,12 @@
                     <span class="value" th:text="${userId}">user_123</span>
                 </div>
             </div>
-            
-            <!-- 결제 금액 -->
+
             <div class="amount-display">
                 <div class="label">결제 금액</div>
                 <div class="value" th:text="${amount + '원'}">1,000원</div>
             </div>
-            
-            <!-- 고객 정보 입력 -->
+
             <div class="form-group">
                 <label for="customerName">👤 고객명</label>
                 <input type="text" id="customerName" value="홍길동" placeholder="고객명을 입력하세요">
@@ -267,8 +263,7 @@
                 <label for="customerPhone">📱 휴대폰 번호</label>
                 <input type="tel" id="customerPhone" value="01012345678" placeholder="휴대폰 번호를 입력하세요">
             </div>
-            
-            <!-- 결제 수단 선택 -->
+
             <div class="form-group">
                 <label>💳 결제 수단</label>
                 <div class="payment-methods">
@@ -290,13 +285,11 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- 결제하기 버튼 -->
+
             <button id="payButton" class="pay-button" type="button">
                 <span th:text="${amount + '원 결제하기'}">1,000원 결제하기</span>
             </button>
-            
-            <!-- 로딩 상태 -->
+
             <div class="loading" id="loading">
                 <div class="spinner"></div>
                 <p>결제 처리 중입니다...</p>
@@ -305,11 +298,8 @@
     </div>
 
     <script th:inline="javascript">
-        // 서버에서 전달받은 데이터
         const clientKey = /*[[${clientKey}]]*/ 'test_ck_PBal2vxj81zE0aPZaJJw35RQgOAN';
         const userId = /*[[${userId}]]*/ 'user_123';
-        // 이미 결제가 성공한 ORDER_ID의 경우, '일시적인 오류'가 뜹니다.
-        // 그렇기 때문에 테스트를 위해 임의로 주문 ID를 설정합니다.
         const serverOrderIdRaw = '[[${orderId}]]';
         const orderId = (serverOrderIdRaw && serverOrderIdRaw !== 'null'
             ? serverOrderIdRaw.replace(/^\"|\"$/g, '')
@@ -322,25 +312,20 @@
         console.log('User ID:', userId);
         console.log('Order ID:', orderId);
         console.log('Amount:', amount);
-        
-        // 선택된 결제 수단
+
         let selectedPaymentMethod = 'CARD';
-        
-        // 결제 수단 선택 이벤트 (DOM 로드 후 바인딩)
+
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.payment-method').forEach(method => {
                 method.addEventListener('click', function() {
-                    // 이전 선택 해제
                     document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('selected'));
-                    
-                    // 새로운 선택 적용
+
                     this.classList.add('selected');
                     selectedPaymentMethod = this.getAttribute('data-method');
                     
                     console.log('결제 수단 선택:', selectedPaymentMethod);
                 });
             });
-            // 버튼 클릭 이벤트 바인딩 (inline onclick 제거 대응)
             var payBtn = document.getElementById('payButton');
             if (payBtn) {
                 payBtn.addEventListener('click', function() {
@@ -352,12 +337,10 @@
                 });
             }
         });
-        
-        // 결제 요청 함수 (전역 바인딩)
+
         window.requestPayment = async function() {
             console.log('=== 결제 요청 시작 ===');
-            
-            // 입력값 검증
+
             const customerName = document.getElementById('customerName').value.trim();
             const customerEmail = document.getElementById('customerEmail').value.trim();
             const customerPhone = document.getElementById('customerPhone').value.trim();
@@ -376,8 +359,7 @@
                 alert('휴대폰 번호를 입력해주세요.');
                 return;
             }
-            
-            // 로딩 상태 표시
+
             document.getElementById('loading').classList.add('show');
             document.querySelector('.pay-button').disabled = true;
             
@@ -386,8 +368,7 @@
                 console.log('고객명:', customerName);
                 console.log('이메일:', customerEmail);
                 console.log('휴대폰:', customerPhone);
-                
-                // SDK 로드 확인 후 인스턴스 생성
+
                 const tp = window.TossPayments ? TossPayments(clientKey) : null;
                 if (!tp) {
                     alert('결제 SDK 로드에 실패했습니다. 잠시 후 다시 시도해주세요.');
@@ -397,7 +378,6 @@
                 }
                 const payment = tp.payment({ customerKey: userId });
 
-                // v2/standard SDK 결제 요청
                 await payment.requestPayment({
                     method: selectedPaymentMethod,
                     amount: {
@@ -411,7 +391,6 @@
                     customerEmail: customerEmail,
                     customerName: customerName,
                     customerMobilePhone: customerPhone,
-                    // 카드 결제 옵션
                     card: {
                         useEscrow: false,
                         flowMode: "DEFAULT",
@@ -423,14 +402,12 @@
             } catch (error) {
                 console.error('결제 요청 실패:', error);
                 alert('결제 요청에 실패했습니다: ' + (error.message || '알 수 없는 오류'));
-                
-                // 로딩 상태 해제
+
                 document.getElementById('loading').classList.remove('show');
                 document.querySelector('.pay-button').disabled = false;
             }
         }
-        
-        // 페이지 로드 완료 시
+
         document.addEventListener('DOMContentLoaded', function() {
             console.log('결제 페이지 로드 완료');
             console.log('TossPayments 로드 상태:', typeof window.TossPayments !== 'undefined');

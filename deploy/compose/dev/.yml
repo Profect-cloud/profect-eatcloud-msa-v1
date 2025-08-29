@@ -1,9 +1,6 @@
-# Development Environment Override
-# Updated for New Service Structure: auth, customer, admin, manager, store, order, payment
 version: "3.8"
 
 services:
-  # Development specific configurations
   eureka-server:
     environment:
       SPRING_PROFILES_ACTIVE: docker,dev
@@ -16,13 +13,10 @@ services:
     env_file:
       - ../env/dev/gateway.env
 
-  # Single Database with development settings
   eatcloud-db:
     env_file:
       - ../env/dev/eatcloud-db.env
 
-
-  # Uncomment services when ready to use
   auth-service:
     env_file:
       - ../env/dev/auth-service.env

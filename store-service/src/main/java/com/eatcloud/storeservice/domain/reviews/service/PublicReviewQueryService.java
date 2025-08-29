@@ -18,10 +18,8 @@ public class PublicReviewQueryService {
 
     private final OrdersReviewClient orders;
 
-    /** 리뷰 목록 + 요약 */
     @Transactional(readOnly = true)
     public PublicReviewListResponse list(UUID storeId, PublicReviewFilter filter, Pageable pageable) {
-        // createdAt, rating 만 정렬 허용
         pageable = SortWhitelist.enforce(pageable, Set.of("createdAt", "rating"));
 
         OrdersReviewPageResponse page = orders.fetchReviews(
@@ -64,7 +62,6 @@ public class PublicReviewQueryService {
                 .build();
     }
 
-    /** 리뷰 요약만 */
     @Transactional(readOnly = true)
     public RatingSummaryResponse summary(UUID storeId) {
         return orders.fetchSummary(storeId);

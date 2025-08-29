@@ -22,10 +22,7 @@ import java.util.UUID;
 public class StoreAdminService {
 
     private final StoreRepository storeRepository;
-    private final AdminCategoryPort adminCategoryPort; // ✅ 변경
-    /**
-     * 멱등: applicationKey가 있으면 같은 키로 이미 생성된 스토어를 반환
-     */
+    private final AdminCategoryPort adminCategoryPort;
     public UUID createStore(CreateStoreCommand cmd, UUID applicationKey) {
         if (applicationKey != null) {
             return storeRepository.findByApplicationId(applicationKey)
@@ -40,7 +37,7 @@ public class StoreAdminService {
                 .storeName(cmd.getStoreName())
                 .storeAddress(cmd.getStoreAddress())
                 .phoneNumber(cmd.getStorePhoneNumber())
-                .storeCategoryId(catId)     // ✅ 정수 ID 저장
+                .storeCategoryId(catId)
                 .managerId(cmd.getManagerId())
                 .minCost(0)
                 .description(cmd.getDescription())
@@ -68,9 +65,7 @@ public class StoreAdminService {
             throw new StoreException(StoreErrorCode.STORE_ALREADY_CLOSED);
         }
 
-        // 운영상 폐업: 오픈 상태만 변경
         store.setOpenStatus(false);
-        // 필요하면 cmd.getReason()를 별도 감사 테이블에 적재
 
         storeRepository.save(store);
     }

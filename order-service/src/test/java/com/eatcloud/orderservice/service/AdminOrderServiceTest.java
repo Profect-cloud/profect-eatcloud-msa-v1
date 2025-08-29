@@ -44,7 +44,6 @@ class AdminOrderServiceTest {
     void setUp() {
         orderId = UUID.randomUUID();
 
-        // 상태 코드들 설정
         paidStatus = OrderStatusCode.builder()
                 .code("PAID")
                 .displayName("결제완료")
@@ -65,7 +64,6 @@ class AdminOrderServiceTest {
                 .displayName("대기중")
                 .build();
 
-        // 주문 엔티티 설정
         order = Order.builder()
                 .orderId(orderId)
                 .orderNumber("ORD-20241215-ABCDE")
@@ -76,15 +74,12 @@ class AdminOrderServiceTest {
     @Test
     @DisplayName("주문 수락 - 성공")
     void confirmOrder_Success() {
-        // Given
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
         given(orderStatusCodeRepository.findByCode("CONFIRMED")).willReturn(Optional.of(confirmedStatus));
         given(orderRepository.save(any(Order.class))).willReturn(order);
 
-        // When
         AdminOrderResponseDto response = adminOrderService.confirmOrder(orderId);
 
-        // Then
         assertThat(response).isNotNull();
         assertThat(response.getOrderId()).isEqualTo(orderId);
         assertThat(response.getOrderNumber()).isEqualTo("ORD-20241215-ABCDE");
@@ -99,10 +94,8 @@ class AdminOrderServiceTest {
     @Test
     @DisplayName("주문 수락 - 주문 없음 예외")
     void confirmOrder_OrderNotFound_ThrowsException() {
-        // Given
         given(orderRepository.findById(orderId)).willReturn(Optional.empty());
 
-        // When & Then
         assertThatThrownBy(() -> adminOrderService.confirmOrder(orderId))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("주문을 찾을 수 없습니다: " + orderId);
@@ -114,7 +107,6 @@ class AdminOrderServiceTest {
     @Test
     @DisplayName("주문 수락 - 결제 미완료 상태 예외")
     void confirmOrder_NotPaidStatus_ThrowsException() {
-        // Given
         Order pendingOrder = Order.builder()
                 .orderId(orderId)
                 .orderNumber("ORD-20241215-ABCDE")
@@ -123,7 +115,6 @@ class AdminOrderServiceTest {
 
         given(orderRepository.findById(orderId)).willReturn(Optional.of(pendingOrder));
 
-        // When & Then
         assertThatThrownBy(() -> adminOrderService.confirmOrder(orderId))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("결제 완료된 주문만 수락할 수 있습니다. 현재 상태: PENDING");
@@ -135,11 +126,9 @@ class AdminOrderServiceTest {
     @Test
     @DisplayName("주문 수락 - 상태 코드 없음 예외")
     void confirmOrder_StatusCodeNotFound_ThrowsException() {
-        // Given
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
         given(orderStatusCodeRepository.findByCode("CONFIRMED")).willReturn(Optional.empty());
 
-        // When & Then
         assertThatThrownBy(() -> adminOrderService.confirmOrder(orderId))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("주문 상태 코드를 찾을 수 없습니다: CONFIRMED");
@@ -152,7 +141,6 @@ class AdminOrderServiceTest {
     @Test
     @DisplayName("주문 완료 - 성공")
     void completeOrder_Success() {
-        // Given
         Order confirmedOrder = Order.builder()
                 .orderId(orderId)
                 .orderNumber("ORD-20241215-ABCDE")
@@ -163,10 +151,9 @@ class AdminOrderServiceTest {
         given(orderStatusCodeRepository.findByCode("COMPLETED")).willReturn(Optional.of(completedStatus));
         given(orderRepository.save(any(Order.class))).willReturn(confirmedOrder);
 
-        // When
+
         AdminOrderResponseDto response = adminOrderService.completeOrder(orderId);
 
-        // Then
         assertThat(response).isNotNull();
         assertThat(response.getOrderId()).isEqualTo(orderId);
         assertThat(response.getOrderNumber()).isEqualTo("ORD-20241215-ABCDE");
@@ -181,10 +168,8 @@ class AdminOrderServiceTest {
     @Test
     @DisplayName("주문 완료 - 수락되지 않은 주문 예외")
     void completeOrder_NotConfirmedStatus_ThrowsException() {
-        // Given
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order)); // PAID 상태
 
-        // When & Then
         assertThatThrownBy(() -> adminOrderService.completeOrder(orderId))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("수락된 주문만 완료할 수 있습니다. 현재 상태: PAID");
@@ -196,13 +181,8 @@ class AdminOrderServiceTest {
     @Test
     @DisplayName("주문 상태 조회 - 성공")
     void getOrderStatus_Success() {
-        // Given
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
-
-        // When
         AdminOrderResponseDto response = adminOrderService.getOrderStatus(orderId);
-
-        // Then
         assertThat(response).isNotNull();
         assertThat(response.getOrderId()).isEqualTo(orderId);
         assertThat(response.getOrderNumber()).isEqualTo("ORD-20241215-ABCDE");
@@ -215,10 +195,8 @@ class AdminOrderServiceTest {
     @Test
     @DisplayName("주문 상태 조회 - 주문 없음 예외")
     void getOrderStatus_OrderNotFound_ThrowsException() {
-        // Given
         given(orderRepository.findById(orderId)).willReturn(Optional.empty());
 
-        // When & Then
         assertThatThrownBy(() -> adminOrderService.getOrderStatus(orderId))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("주문을 찾을 수 없습니다: " + orderId);
@@ -229,14 +207,12 @@ class AdminOrderServiceTest {
     @Test
     @DisplayName("주문 상태별 비즈니스 로직 테스트 - 전체 플로우")
     void orderStatusFlow_CompleteWorkflow() {
-        // Given - PAID 상태의 주문
         Order paidOrder = Order.builder()
                 .orderId(orderId)
                 .orderNumber("ORD-20241215-ABCDE")
                 .orderStatusCode(paidStatus)
                 .build();
 
-        // 1. 주문 수락 (PAID -> CONFIRMED)
         given(orderRepository.findById(orderId)).willReturn(Optional.of(paidOrder));
         given(orderStatusCodeRepository.findByCode("CONFIRMED")).willReturn(Optional.of(confirmedStatus));
 
@@ -247,13 +223,10 @@ class AdminOrderServiceTest {
                 .build();
         given(orderRepository.save(any(Order.class))).willReturn(confirmedOrder);
 
-        // When - 주문 수락
         AdminOrderResponseDto confirmResponse = adminOrderService.confirmOrder(orderId);
 
-        // Then - 수락 성공 확인
         assertThat(confirmResponse.getOrderStatus()).isEqualTo("CONFIRMED");
 
-        // Given - 이제 CONFIRMED 상태의 주문
         given(orderRepository.findById(orderId)).willReturn(Optional.of(confirmedOrder));
         given(orderStatusCodeRepository.findByCode("COMPLETED")).willReturn(Optional.of(completedStatus));
 
@@ -264,10 +237,8 @@ class AdminOrderServiceTest {
                 .build();
         given(orderRepository.save(any(Order.class))).willReturn(completedOrder);
 
-        // When - 주문 완료
         AdminOrderResponseDto completeResponse = adminOrderService.completeOrder(orderId);
 
-        // Then - 완료 성공 확인
         assertThat(completeResponse.getOrderStatus()).isEqualTo("COMPLETED");
 
         verify(orderRepository, times(2)).findById(orderId);
@@ -277,7 +248,6 @@ class AdminOrderServiceTest {
     @Test
     @DisplayName("잘못된 상태 전환 시도 - 비즈니스 규칙 위반")
     void invalidStatusTransition_ThrowsException() {
-        // Given - PENDING 상태에서 바로 COMPLETED로 전환 시도
         Order pendingOrder = Order.builder()
                 .orderId(orderId)
                 .orderNumber("ORD-20241215-ABCDE")
@@ -285,8 +255,6 @@ class AdminOrderServiceTest {
                 .build();
 
         given(orderRepository.findById(orderId)).willReturn(Optional.of(pendingOrder));
-
-        // When & Then - PENDING -> COMPLETED는 불가능
         assertThatThrownBy(() -> adminOrderService.completeOrder(orderId))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("수락된 주문만 완료할 수 있습니다. 현재 상태: PENDING");
@@ -295,15 +263,12 @@ class AdminOrderServiceTest {
     @Test
     @DisplayName("동시성 테스트 - 같은 주문에 대한 동시 상태 변경")
     void concurrentStatusUpdate_ShouldHandleGracefully() {
-        // Given
         given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
         given(orderStatusCodeRepository.findByCode("CONFIRMED")).willReturn(Optional.of(confirmedStatus));
         given(orderRepository.save(any(Order.class))).willReturn(order);
 
-        // When - 같은 주문에 대해 두 번 수락 시도
         AdminOrderResponseDto response1 = adminOrderService.confirmOrder(orderId);
 
-        // 이미 CONFIRMED 상태인 주문에 대해 다시 수락 시도
         Order alreadyConfirmedOrder = Order.builder()
                 .orderId(orderId)
                 .orderNumber("ORD-20241215-ABCDE")
@@ -312,7 +277,6 @@ class AdminOrderServiceTest {
 
         given(orderRepository.findById(orderId)).willReturn(Optional.of(alreadyConfirmedOrder));
 
-        // Then - 이미 수락된 주문이므로 예외 발생
         assertThatThrownBy(() -> adminOrderService.confirmOrder(orderId))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("결제 완료된 주문만 수락할 수 있습니다. 현재 상태: CONFIRMED");

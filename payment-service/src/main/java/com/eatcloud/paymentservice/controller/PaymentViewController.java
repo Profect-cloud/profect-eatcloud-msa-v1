@@ -27,9 +27,8 @@ public class PaymentViewController {
     public String chargePage(Model model) {
         UUID orderId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
-        Integer amount = 1000; // 테스트 금액
+        Integer amount = 1000;
 
-        // 서버에서 결제요청 엔티티를 미리 생성해 둔다 (성공 콜백에서 승인/완료 처리 가능)
         try {
             paymentService.createPaymentRequest(orderId, userId, amount);
         } catch (Exception e) {

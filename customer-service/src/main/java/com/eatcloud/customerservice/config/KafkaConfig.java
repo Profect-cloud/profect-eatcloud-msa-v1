@@ -26,8 +26,7 @@ public class KafkaConfig {
     
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
-    
-    // String 기반 Consumer 설정
+
     @Bean
     public ConsumerFactory<String, String> consumerFactory() {
         Map<String, Object> configProps = new HashMap<>();
@@ -36,8 +35,7 @@ public class KafkaConfig {
         configProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         configProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         configProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        
-        // 공통 설정 추가
+
         configProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
         configProps.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, 1000);
         configProps.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, 30000);
@@ -53,15 +51,13 @@ public class KafkaConfig {
         ConcurrentKafkaListenerContainerFactory<String, String> factory = 
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
-        
-        // 에러 핸들러 설정
+
         factory.setCommonErrorHandler(new DefaultErrorHandler(
             (consumerRecord, exception) -> {
                 log.error("메시지 처리 실패 - 토픽: {}, 파티션: {}, 오프셋: {}, 에러: {}", 
                     consumerRecord.topic(), consumerRecord.partition(), 
                     consumerRecord.offset(), exception.getMessage());
-                
-                // Dead Letter Queue로 전송
+
                 sendToDeadLetterQueue(consumerRecord, exception);
             },
             new ExponentialBackOff(1000L, 2.0)
@@ -69,10 +65,7 @@ public class KafkaConfig {
         
         return factory;
     }
-    
-    /**
-     * Dead Letter Queue로 실패한 메시지 전송
-     */
+
     private void sendToDeadLetterQueue(org.apache.kafka.clients.consumer.ConsumerRecord<?, ?> record, Exception exception) {
         try {
             String dlqTopic = record.topic() + ".DLQ";
@@ -81,8 +74,7 @@ public class KafkaConfig {
                 record.topic(), record.partition(), record.offset(),
                 record.key(), record.value(), exception.getMessage()
             );
-            
-            // DLQ로 전송
+
             kafkaTemplate().send(dlqTopic, record.key().toString(), errorMessage);
             log.info("Dead Letter Queue로 전송 완료: {}", dlqTopic);
             
@@ -90,8 +82,7 @@ public class KafkaConfig {
             log.error("Dead Letter Queue 전송 실패", dlqException);
         }
     }
-    
-    // KafkaTemplate Bean
+
     @Bean
     public ProducerFactory<String, String> producerFactory() {
         Map<String, Object> configProps = new HashMap<>();

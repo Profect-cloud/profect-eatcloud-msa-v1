@@ -15,14 +15,10 @@ public class ExternalApiService {
 
     private final RestTemplate restTemplate;
 
-    // @LoadBalanced가 적용된 RestTemplate 주입
     public ExternalApiService(@Qualifier("restTemplate") RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
 
-    /**
-     * 고객 존재 여부 확인
-     */
     public Boolean checkCustomerExists(UUID customerId) {
         try {
             String url = "http://customer-service/customers/" + customerId + "/exists";
@@ -40,16 +36,10 @@ public class ExternalApiService {
 
         } catch (RestClientException e) {
             log.error("Failed to check customer exists for customerId: {}", customerId, e);
-            // Fallback: 서비스 장애 시에도 주문 진행 가능하도록
             return true;
         }
     }
 
-
-
-    /**
-     * 메뉴 가격 조회
-     */
     public Integer getMenuPrice(UUID menuId) {
         try {
             String url = "http://store-service/stores/menus/" + menuId + "/price";
@@ -76,9 +66,6 @@ public class ExternalApiService {
         }
     }
 
-    /**
-     * 사용자 포인트 조회
-     */
     public Integer getCustomerPoints(UUID customerId, String bearerToken) {
         try {
             String url = "http://customer-service/api/v1/customers/" + customerId + "/points";

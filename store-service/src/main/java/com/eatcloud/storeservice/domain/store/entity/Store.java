@@ -27,7 +27,6 @@ public class Store extends BaseTimeEntity {
     @Column(name = "store_id")
     private UUID storeId;
 
-    // ✅ 사장 연관 제거 → 식별자만 보관
     @Column(name = "manager_id", nullable = true, columnDefinition = "uuid")
     private UUID managerId;
 
@@ -71,7 +70,6 @@ public class Store extends BaseTimeEntity {
     @Column(name = "store_category_id", nullable = false)
     private Integer storeCategoryId;
 
-    // ⭐ 평점 집계 (스키마: rating_sum NUMERIC(10,2), rating_count INT, avg_rating NUMERIC(3,2))
     @Column(name = "rating_sum", nullable = false, precision = 10, scale = 2)
     @Builder.Default
     private BigDecimal ratingSum = BigDecimal.ZERO;

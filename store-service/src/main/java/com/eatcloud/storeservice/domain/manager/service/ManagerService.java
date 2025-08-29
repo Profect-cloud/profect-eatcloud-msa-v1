@@ -35,7 +35,6 @@ public class ManagerService {
         this.tfidfService = tfidfService;
     }
 
-    // 메뉴 생성
     @Transactional
     public Menu createMenu(UUID storeId, MenuRequestDto dto) {
         Store store = storeRepository.findById(storeId)
@@ -113,7 +112,6 @@ public class ManagerService {
         Menu updatedMenu = menuRepository.save(menu);
         log.info("메뉴 수정 완료: {}", updatedMenu.getMenuName());
 
-        // 벡터 재생성 (비동기 처리)
         CompletableFuture.runAsync(() -> {
             try {
                 tfidfService.generateAndSaveMenuVector(updatedMenu);
@@ -134,7 +132,6 @@ public class ManagerService {
         menuRepository.softDeleteById(menuId,"매니저");
         log.info("메뉴 삭제 완료: {}", menuName);
 
-        // 벡터도 함께 삭제 (비동기 처리)
         CompletableFuture.runAsync(() -> {
             try {
                 tfidfService.deleteMenuVector(menuName);

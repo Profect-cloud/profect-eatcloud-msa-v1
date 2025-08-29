@@ -1,8 +1,7 @@
 
--- Extensions used in this schema
+
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
--- ========= 카테고리 3단계 =========
 CREATE TABLE IF NOT EXISTS p_store_categories (
   id                 INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   name               VARCHAR(100) NOT NULL UNIQUE,
@@ -62,7 +61,6 @@ CREATE INDEX IF NOT EXISTS idx_menu_store ON p_menu_categories (store_category_i
 CREATE INDEX IF NOT EXISTS idx_menu_active_sort_in_mid
   ON p_menu_categories (mid_category_id, is_active, sort_order, id);
 
--- ========= 관리자/신청 =========
 CREATE TABLE IF NOT EXISTS p_admins (
   id           UUID PRIMARY KEY,
   name         VARCHAR(20) UNIQUE NOT NULL,
@@ -81,26 +79,21 @@ CREATE TABLE IF NOT EXISTS p_admins (
 CREATE TABLE IF NOT EXISTS p_manager_store_applications (
     application_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
-    -- ■ Manager 신청 정보
     manager_name         VARCHAR(20)  NOT NULL,
     manager_email        VARCHAR(255) NOT NULL,
     manager_password     VARCHAR(255) NOT NULL,
     manager_phone_number VARCHAR(18),
 
-    -- ■ Store 신청 정보
     store_name           VARCHAR(200) NOT NULL,
     store_address        VARCHAR(300),
     store_phone_number   VARCHAR(18),
-    -- 기존 설계와 맞춤: top-level 카테고리는 admin.p_store_categories(id) = INTEGER
     store_category_id    INT NOT NULL REFERENCES p_store_categories(id),
     description          TEXT,
 
-    -- ■ 심사 상태
     status               VARCHAR(20)  NOT NULL DEFAULT 'PENDING',  -- PENDING|APPROVED|REJECTED
     reviewer_admin_id    UUID REFERENCES p_admins(id) ON DELETE SET NULL,
     review_comment       TEXT,
 
-    -- ■ BaseTimeEntity (autotime) 필드
     created_at           TIMESTAMP    NOT NULL DEFAULT now(),
     created_by           VARCHAR(100) NOT NULL DEFAULT 'system',
     updated_at           TIMESTAMP    NOT NULL DEFAULT now(),
@@ -109,7 +102,6 @@ CREATE TABLE IF NOT EXISTS p_manager_store_applications (
     deleted_by           VARCHAR(100)
 );
 
--- 인덱스/유니크
 CREATE UNIQUE INDEX IF NOT EXISTS ux_mgrstore_manager_email
     ON p_manager_store_applications (manager_email);
 

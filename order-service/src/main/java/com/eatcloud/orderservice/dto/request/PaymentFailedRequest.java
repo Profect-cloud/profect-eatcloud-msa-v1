@@ -14,11 +14,11 @@ import java.util.UUID;
 @NoArgsConstructor
 public class PaymentFailedRequest {
     
-    private UUID paymentId;          // 실패한 결제 ID (있는 경우)
+    private UUID paymentId;
     
     @NotBlank(message = "실패 사유는 필수입니다")
-    private String failureReason;    // 실패 사유
+    private String failureReason;
     
-    private String errorCode;        // PG사 에러 코드
-    private String paymentMethod;    // 시도된 결제 수단
+    private String errorCode;
+    private String paymentMethod;
 }

@@ -63,9 +63,7 @@ public class TossPaymentService {
     
     public String createPaymentRequest(String orderId, Integer amount, String customerId) {
         log.info("토스페이먼츠 결제 요청 생성: orderId={}, amount={}, customerId={}", orderId, amount, customerId);
-        
-        // 실제로는 토스페이먼츠 SDK의 payment.requestPayment() 함수를 호출해야 합니다.
-        // 여기서는 예시로 결제 요청 URL을 반환합니다.
+
         String redirectUrl = String.format(
                 "https://pay.toss.im/?orderId=%s&amount=%d&customerId=%s",
                 orderId, amount, customerId

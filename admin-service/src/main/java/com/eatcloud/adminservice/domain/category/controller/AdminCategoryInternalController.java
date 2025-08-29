@@ -1,4 +1,3 @@
-// admin-service / domain/category/controller/AdminCategoryInternalController.java
 package com.eatcloud.adminservice.domain.category.controller;
 
 import com.eatcloud.adminservice.domain.admin.dto.CategoryDto;

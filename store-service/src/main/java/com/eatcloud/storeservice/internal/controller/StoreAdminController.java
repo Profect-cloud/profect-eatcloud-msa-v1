@@ -1,7 +1,5 @@
 package com.eatcloud.storeservice.internal.controller;
 
-// com.eatcloud.storeservice.api.internal.StoreAdminController
-
 
 import com.eatcloud.storeservice.domain.store.service.StoreAdminService;
 
@@ -20,9 +18,6 @@ public class StoreAdminController {
 
     private final StoreAdminService storeAdminService;
 
-    /**
-     * 가게 생성 (멱등: applicationId 또는 Idempotency-Key 헤더)
-     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public UUID create(@RequestBody CreateStoreCommand cmd,
@@ -32,9 +27,6 @@ public class StoreAdminController {
         return storeAdminService.createStore(cmd, key);
     }
 
-    /**
-     * 가게 폐업(운영상 닫기) – openStatus=false
-     */
     @PostMapping("/{storeId}:close")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void close(@PathVariable UUID storeId,

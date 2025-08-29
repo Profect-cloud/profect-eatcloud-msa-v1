@@ -26,27 +26,20 @@ public class PointReservationService {
 
     private static final String PAYMENT_SERVICE_URL = "http://payment-service/api/v1/payments";
 
-    /**
-     * 포인트 예약 생성
-     */
     @Transactional
     public PointReservation createReservation(UUID customerId, UUID orderId, Integer points) {
         log.info("포인트 예약 생성 시작: customerId={}, orderId={}, points={}", customerId, orderId, points);
 
-        // 고객 존재 여부 확인
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new RuntimeException("고객을 찾을 수 없습니다: " + customerId));
 
-        // 이미 해당 주문에 대한 예약이 있는지 확인
         if (pointReservationRepository.existsByOrderId(orderId)) {
             throw new IllegalStateException("이미 포인트 예약이 존재합니다: orderId=" + orderId);
         }
 
-        // 포인트 예약 처리
         customer.reservePoints(points);
         customerRepository.save(customer);
 
-        // 예약 정보 생성
         PointReservation reservation = PointReservation.builder()
                 .customerId(customerId)
                 .orderId(orderId)
@@ -62,9 +55,6 @@ public class PointReservationService {
         return savedReservation;
     }
 
-    /**
-     * 포인트 예약 처리 (결제 완료 시)
-     */
     @Transactional
     public void processReservation(UUID orderId) {
         log.info("포인트 예약 처리 시작: orderId={}", orderId);
@@ -83,16 +73,12 @@ public class PointReservationService {
             return;
         }
 
-        // 예약 처리
         reservation.process();
         pointReservationRepository.save(reservation);
 
         log.info("포인트 예약 처리 완료: orderId={}, reservationId={}", orderId, reservation.getReservationId());
     }
 
-    /**
-     * 포인트 예약 취소 (주문 취소 시)
-     */
     @Transactional
     public void cancelReservation(UUID orderId) {
         log.info("포인트 예약 취소 시작: orderId={}", orderId);
@@ -111,55 +97,39 @@ public class PointReservationService {
             return;
         }
 
-        // 고객에게 포인트 환불
         Customer customer = customerRepository.findById(reservation.getCustomerId())
                 .orElseThrow(() -> new RuntimeException("고객을 찾을 수 없습니다: " + reservation.getCustomerId()));
 
         customer.refundReservedPoints(reservation.getPoints());
         customerRepository.save(customer);
 
-        // 예약 취소
         reservation.cancel();
         pointReservationRepository.save(reservation);
 
         log.info("포인트 예약 취소 완료: orderId={}, reservationId={}, refundedPoints={}",
                 orderId, reservation.getReservationId(), reservation.getPoints());
 
-        // 포인트 환불 완료 후 PaymentService에 결제 상태 REFUNDED로 업데이트 요청
         try {
             String url = PAYMENT_SERVICE_URL + "/refund/" + orderId;
             restTemplate.postForObject(url, null, String.class);
             log.info("PaymentService에 결제 상태 REFUNDED 업데이트 요청 완료: orderId={}", orderId);
         } catch (Exception e) {
             log.error("PaymentService에 결제 상태 REFUNDED 업데이트 요청 실패: orderId={}", orderId, e);
-            // 포인트 환불은 완료되었으므로 이 오류는 로그만 남기고 계속 진행
         }
     }
 
-    /**
-     * 고객의 활성 예약 조회
-     */
     public List<PointReservation> getActiveReservations(UUID customerId) {
         return pointReservationRepository.findActiveReservationsByCustomerId(customerId);
     }
 
-    /**
-     * 고객의 예약 상태별 조회
-     */
     public List<PointReservation> getReservationsByStatus(UUID customerId, ReservationStatus status) {
         return pointReservationRepository.findByCustomerIdAndStatus(customerId, status);
     }
 
-    /**
-     * 예약 정보 조회
-     */
     public Optional<PointReservation> getReservation(UUID reservationId) {
         return pointReservationRepository.findById(reservationId);
     }
 
-    /**
-     * 주문별 예약 정보 조회
-     */
     public Optional<PointReservation> getReservationByOrderId(UUID orderId) {
         return pointReservationRepository.findByOrderId(orderId);
     }

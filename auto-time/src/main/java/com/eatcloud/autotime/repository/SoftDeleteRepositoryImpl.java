@@ -13,7 +13,6 @@ import com.eatcloud.autotime.BaseTimeEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 
-/** delete 계열 차단 + 소프트 삭제 전용 구현 */
 public class SoftDeleteRepositoryImpl<T extends BaseTimeEntity, ID extends Serializable>
 	extends SimpleJpaRepository<T, ID>
 	implements SoftDeleteRepository<T, ID> {
@@ -27,7 +26,6 @@ public class SoftDeleteRepositoryImpl<T extends BaseTimeEntity, ID extends Seria
 		this.info = entityInformation;
 	}
 
-	// 물리 삭제 금지
 	@Override public void delete(T e) { throw unsupported(); }
 	@Override public void deleteAll(Iterable<? extends T> e) { throw unsupported(); }
 	@Override public void deleteAll() { throw unsupported(); }
@@ -36,7 +34,6 @@ public class SoftDeleteRepositoryImpl<T extends BaseTimeEntity, ID extends Seria
 		return new UnsupportedOperationException("Use softDelete*() instead of physical delete");
 	}
 
-	// 소프트 삭제
 	@Override
 	public void softDelete(T entity, String actor) {
 		Objects.requireNonNull(entity); Objects.requireNonNull(actor);
@@ -66,7 +63,7 @@ public class SoftDeleteRepositoryImpl<T extends BaseTimeEntity, ID extends Seria
 		q.setParameter("actor", actor);
 		q.setParameter("ids", ids);
 		int updated = q.executeUpdate();
-		em.clear(); // 1차 캐시 불일치 방지
+		em.clear();
 		return updated;
 	}
 

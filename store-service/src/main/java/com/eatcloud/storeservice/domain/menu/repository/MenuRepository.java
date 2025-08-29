@@ -15,8 +15,6 @@ public interface MenuRepository extends SoftDeleteRepository<Menu, UUID> {
 
     boolean existsByStoreAndMenuNum(Store store, int menuNum);
 
-    // MenuRepository_min.java
-
     List<Menu> findAllByStore(Store store);
     Optional<Menu> findByIdAndStore(UUID id, Store store);
 

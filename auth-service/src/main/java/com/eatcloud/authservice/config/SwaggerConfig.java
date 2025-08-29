@@ -11,8 +11,6 @@ import org.springframework.http.HttpHeaders;
 
 @Configuration
 public class SwaggerConfig {
-    //http://localhost:8080/swagger-ui/index.html
-    // https://fiteam.shop/swagger-ui/index.html
     @Bean
     public OpenAPI customOpenAPI() {
         Components components = new Components()

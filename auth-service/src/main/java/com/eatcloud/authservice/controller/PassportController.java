@@ -25,10 +25,6 @@ public class PassportController {
         this.passportTokenService = passportTokenService;
     }
 
-    /**
-     * 외부 액세스 토큰을 검증한 뒤 내부 패스포트 토큰을 발급한다.
-     * Authorization: Bearer <external-jwt>
-     */
     @PostMapping("/token/exchange")
     public ResponseEntity<Map<String, Object>> exchange(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) {
         if (authorization == null || !authorization.startsWith("Bearer ")) {
@@ -56,9 +52,6 @@ public class PassportController {
         ));
     }
 
-    /**
-     * JWKS 공개키 세트를 제공한다.
-     */
     @GetMapping("/.well-known/jwks.json")
     public Map<String, Object> jwks() {
         return passportTokenService.getJwks();

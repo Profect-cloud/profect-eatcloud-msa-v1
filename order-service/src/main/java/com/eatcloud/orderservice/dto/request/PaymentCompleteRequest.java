@@ -17,7 +17,7 @@ public class PaymentCompleteRequest {
     @NotNull(message = "결제 ID는 필수입니다")
     private UUID paymentId;
     
-    private String paymentMethod;    // 결제 수단
-    private String transactionId;    // PG사 거래 ID
-    private Integer paidAmount;      // 실제 결제된 금액
+    private String paymentMethod;
+    private String transactionId;
+    private Integer paidAmount;
 }

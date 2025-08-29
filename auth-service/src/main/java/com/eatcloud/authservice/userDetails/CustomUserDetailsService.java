@@ -16,15 +16,12 @@ import org.springframework.web.client.RestTemplate;
 public class CustomUserDetailsService implements UserDetailsService {
 
 	private final RestTemplate restTemplate;
-	private final String gatewayUrl = "http://api-gateway"; // Gateway 주소
+	private final String gatewayUrl = "http://api-gateway";
 
 	public CustomUserDetailsService(RestTemplate restTemplate) {
 		this.restTemplate = restTemplate;
 	}
 
-	/**
-	 * UUID와 사용자 타입("admin", "manager", "customer")을 받아 UserDetails 반환
-	 */
 	public UserDetails loadUserByIdAndType(UUID id, String type) {
 		Map<?, ?> user = getUserFromService(type, id);
 
@@ -47,19 +44,16 @@ public class CustomUserDetailsService implements UserDetailsService {
 				.build();
 	}
 
-	/**
-	 * Gateway를 통해 유저 정보 조회
-	 */
 	private Map<?, ?> getUserFromService(String type, UUID id) {
 		String serviceName = switch (type.toLowerCase()) {
-			case "admin", "manager" -> type + "-service"; // admin-service, manager-service
+			case "admin", "manager" -> type + "-service";
 			case "customer" -> "customer-service";
 			default -> throw new IllegalArgumentException("알 수 없는 사용자 타입: " + type);
 		};
 
 		String path = switch (type.toLowerCase()) {
-			case "admin", "manager" -> type;        // singular
-			case "customer" -> "customers";         // plural
+			case "admin", "manager" -> type;
+			case "customer" -> "customers";
 			default -> throw new IllegalArgumentException("알 수 없는 사용자 타입: " + type);
 		};
 

@@ -26,8 +26,7 @@ public class KafkaConfig {
     
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
-    
-    // Producer 설정
+
     @Bean
     public ProducerFactory<String, PaymentCreatedEvent> producerFactory() {
         Map<String, Object> configProps = new HashMap<>();
@@ -44,8 +43,7 @@ public class KafkaConfig {
     public KafkaTemplate<String, PaymentCreatedEvent> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
     }
-    
-    // Consumer 설정
+
     @Bean
     public ConsumerFactory<String, OrderCreatedEvent> consumerFactory() {
         Map<String, Object> configProps = new HashMap<>();
@@ -67,15 +65,13 @@ public class KafkaConfig {
         ConcurrentKafkaListenerContainerFactory<String, OrderCreatedEvent> factory = 
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
-        
-        // 에러 핸들러 설정
+
         factory.setCommonErrorHandler(new DefaultErrorHandler(
             (consumerRecord, exception) -> {
                 log.error("메시지 처리 실패 - 토픽: {}, 파티션: {}, 오프셋: {}, 에러: {}", 
                     consumerRecord.topic(), consumerRecord.partition(), 
                     consumerRecord.offset(), exception.getMessage());
-                
-                // Dead Letter Queue로 전송
+
                 sendToDeadLetterQueue(consumerRecord, exception);
             },
             new ExponentialBackOff(1000L, 2.0)
@@ -83,10 +79,7 @@ public class KafkaConfig {
         
         return factory;
     }
-    
-    /**
-     * Dead Letter Queue로 실패한 메시지 전송
-     */
+
     private void sendToDeadLetterQueue(org.apache.kafka.clients.consumer.ConsumerRecord<?, ?> record, Exception exception) {
         try {
             String dlqTopic = record.topic() + ".DLQ";
@@ -95,13 +88,11 @@ public class KafkaConfig {
                 record.topic(), record.partition(), record.offset(),
                 record.key(), record.value(), exception.getMessage()
             );
-            
-            // DLQ용 KafkaTemplate 생성 (String 타입)
+
             KafkaTemplate<String, String> dlqTemplate = new KafkaTemplate<>(
                 new DefaultKafkaProducerFactory<>(getDlqProducerConfig())
             );
-            
-            // DLQ로 전송
+
             dlqTemplate.send(dlqTopic, record.key().toString(), errorMessage);
             log.info("Dead Letter Queue로 전송 완료: {}", dlqTopic);
             
@@ -109,10 +100,7 @@ public class KafkaConfig {
             log.error("Dead Letter Queue 전송 실패", dlqException);
         }
     }
-    
-    /**
-     * DLQ 전송용 Producer 설정
-     */
+
     private Map<String, Object> getDlqProducerConfig() {
         Map<String, Object> configProps = new HashMap<>();
         configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);

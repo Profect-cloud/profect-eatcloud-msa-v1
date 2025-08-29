@@ -14,5 +14,5 @@ public class DashboardDto {
 	private Long totalStores;
 	private Long totalCategories;
 	private Long totalOrders;
-	private Map<String, Long> additionalMetrics; // 예: 일별 매출, 주문 건수
+	private Map<String, Long> additionalMetrics;
 }

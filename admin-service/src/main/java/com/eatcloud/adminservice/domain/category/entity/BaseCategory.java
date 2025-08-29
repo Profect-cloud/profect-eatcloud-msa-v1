@@ -1,4 +1,3 @@
-// BaseCategory.java
 package com.eatcloud.adminservice.domain.category.entity;
 
 import com.eatcloud.autotime.BaseTimeEntity;
@@ -19,7 +18,6 @@ public abstract class BaseCategory extends BaseTimeEntity {
     @Column(name = "id")
     protected Integer id;
 
-    // 상위: 50, 중간/메뉴: 100을 쓰고 싶다면 하위 엔티티에서 length 재정의 가능
     @Column(name = "code", nullable = false, unique = true, length = 100)
     protected String code;
 

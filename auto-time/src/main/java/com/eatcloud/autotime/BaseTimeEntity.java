@@ -49,7 +49,6 @@ public abstract class BaseTimeEntity {
 
 	public boolean isDeleted() { return deletedAt != null; }
 
-	// SoftDeleteRepository에서만 사용
 	public final void markDeleted(LocalDateTime when, String actor) {
 		this.deletedAt = when;
 		this.deletedBy = actor;

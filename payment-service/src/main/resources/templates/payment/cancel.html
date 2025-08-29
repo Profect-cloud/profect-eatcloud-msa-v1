@@ -306,8 +306,7 @@
                     <div class="value" th:text="${refundedPoints} + 'P'" style="color: #4caf50; font-weight: bold;">0P</div>
                 </div>
             </div>
-            
-            <!-- 롤백 성공시 -->
+
             <div class="status-section" th:if="${rollbackCompleted == true}">
                 <h3>✅ 처리 완료</h3>
                 <ul class="status-list">
@@ -318,8 +317,7 @@
                     <li>모든 데이터가 정상적으로 복구되었습니다</li>
                 </ul>
             </div>
-            
-            <!-- 롤백 실패시 -->
+
             <div class="rollback-error" th:if="${rollbackCompleted == false}">
                 <h3>⚠️ 처리 중 오류 발생</h3>
                 <p th:text="${rollbackError}">일부 데이터 복구 중 오류가 발생했습니다. 고객센터에 문의해 주세요.</p>

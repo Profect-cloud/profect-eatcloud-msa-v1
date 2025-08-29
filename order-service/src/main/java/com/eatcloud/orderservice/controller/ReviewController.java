@@ -31,7 +31,6 @@ public class ReviewController {
 
 	private final ReviewService reviewService;
 
-	// 리뷰 작성
 	@PostMapping
 	public ResponseEntity<ReviewResponseDto> createReview(
 		@RequestHeader("X-User-Id") String userId,
@@ -42,7 +41,6 @@ public class ReviewController {
 		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
 
-	// 고객별 리뷰 조회 (내 리뷰 목록)
 	@GetMapping
 	public ResponseEntity<List<ReviewResponseDto>> getMyReviews(
 		@RequestHeader("X-User-Id") String userId) {
@@ -52,7 +50,6 @@ public class ReviewController {
 		return ResponseEntity.ok(reviews);
 	}
 
-	// 리뷰 수정 (새로 추가)
 	@PutMapping("/{reviewId}")
 	public ResponseEntity<ReviewResponseDto> updateReview(
 		@RequestHeader("X-User-Id") String userId,
@@ -64,7 +61,6 @@ public class ReviewController {
 		return ResponseEntity.ok(response);
 	}
 
-	// 리뷰 삭제
 	@DeleteMapping("/{reviewId}")
 	public ResponseEntity<Void> deleteReview(
 		@RequestHeader("X-User-Id") String userId,
@@ -75,14 +71,12 @@ public class ReviewController {
 		return ResponseEntity.noContent().build();
 	}
 
-	// 매장별 리뷰 조회 (기존 기능 유지)
 	@GetMapping("/stores/{storeId}")
 	public ResponseEntity<List<ReviewResponseDto>> getReviewsByStore(@PathVariable UUID storeId) {
 		List<ReviewResponseDto> reviews = reviewService.getReviewsByStore(storeId);
 		return ResponseEntity.ok(reviews);
 	}
 
-	// 매장별 평점별 리뷰 필터링 (새로 추가)
 	@GetMapping("/stores/{storeId}/filter")
 	public ResponseEntity<List<ReviewResponseDto>> getReviewsByStoreAndRating(
 		@PathVariable UUID storeId,
@@ -92,14 +86,12 @@ public class ReviewController {
 		return ResponseEntity.ok(reviews);
 	}
 
-	// 매장 평점 평균 계산 (새로 추가)
 	@GetMapping("/stores/{storeId}/average-rating")
 	public ResponseEntity<BigDecimal> getAverageRating(@PathVariable UUID storeId) {
 		BigDecimal averageRating = reviewService.calculateAverageRating(storeId);
 		return ResponseEntity.ok(averageRating);
 	}
 
-	// 매장 리뷰 통계 (새로 추가)
 	@GetMapping("/stores/{storeId}/statistics")
 	public ResponseEntity<Map<String, Object>> getReviewStatistics(@PathVariable UUID storeId) {
 		Map<String, Object> statistics = reviewService.getReviewStatistics(storeId);

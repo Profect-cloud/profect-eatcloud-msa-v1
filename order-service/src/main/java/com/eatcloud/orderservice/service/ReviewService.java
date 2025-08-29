@@ -30,13 +30,8 @@ public class ReviewService {
 
 	@Transactional
 	public ReviewResponseDto createReview(UUID customerId, ReviewRequestDto request) {
-		// 유효성 검증
 		validateReviewRequest(request);
-		
-		// 주문 검증
 		Order order = validateAndGetOrder(customerId, request.orderId());
-
-		// 리뷰 생성
 		Review review = Review.builder()
 			.order(order)
 			.rating(request.rating())
@@ -76,14 +71,9 @@ public class ReviewService {
 
 	@Transactional
 	public ReviewResponseDto updateReview(UUID customerId, UUID reviewId, ReviewRequestDto request) {
-		// 유효성 검증
 		validateReviewRequest(request);
-		
-		// 리뷰 조회 및 권한 확인
 		Review review = reviewRepository.findByReviewIdAndOrderCustomerIdAndDeletedAtIsNull(reviewId, customerId)
 			.orElseThrow(() -> new RuntimeException("해당 리뷰가 없거나 수정 권한이 없습니다."));
-
-		// 리뷰 수정 (Setter가 없으므로 새로 빌드)
 		Review updatedReview = Review.builder()
 			.reviewId(review.getReviewId())
 			.order(review.getOrder())
@@ -123,14 +113,8 @@ public class ReviewService {
 			.findByOrderStoreIdAndDeletedAtIsNullOrderByCreatedAtDesc(storeId);
 
 		Map<String, Object> statistics = new HashMap<>();
-		
-		// 총 리뷰 수
 		statistics.put("totalReviews", reviews.size());
-		
-		// 평균 평점
 		statistics.put("averageRating", calculateAverageRating(storeId));
-		
-		// 평점별 개수
 		statistics.put("fiveStarCount", countByRating(reviews, new BigDecimal("5.0")));
 		statistics.put("fourStarCount", countByRating(reviews, new BigDecimal("4.0")));
 		statistics.put("threeStarCount", countByRating(reviews, new BigDecimal("3.0")));
@@ -141,23 +125,19 @@ public class ReviewService {
 	}
 
 	private void validateReviewRequest(ReviewRequestDto request) {
-		// 평점 유효성 검증
 		if (request.rating().compareTo(new BigDecimal("1.0")) < 0 || 
 			request.rating().compareTo(new BigDecimal("5.0")) > 0) {
 			throw new RuntimeException("평점은 1.0~5.0 사이의 값이어야 합니다.");
 		}
 
-		// 내용 유효성 검증
 		if (request.content() == null || request.content().trim().isEmpty()) {
 			throw new RuntimeException("리뷰 내용은 필수입니다.");
 		}
 
-		// 내용 길이 검증
 		if (request.content().length() > 1000) {
 			throw new RuntimeException("리뷰 내용은 1000자 이하로 작성해주세요.");
 		}
 
-		// 부적절한 내용 검증
 		if (containsInappropriateContent(request.content())) {
 			throw new RuntimeException("부적절한 내용이 포함되어 있습니다.");
 		}

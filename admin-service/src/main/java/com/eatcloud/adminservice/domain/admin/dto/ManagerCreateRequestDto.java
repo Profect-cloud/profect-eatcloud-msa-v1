@@ -24,7 +24,6 @@ public class ManagerCreateRequestDto {
 	@Schema(description = "전화번호", example = "010-1234-5678")
 	private String phoneNumber;
 
-	/** (선택) 바로 가게까지 할당하고 싶다면 전달 */
 	@Schema(description = "할당할 가게 ID", example = "11111111-1111-1111-1111-111111111111")
 	private UUID storeId;
 }

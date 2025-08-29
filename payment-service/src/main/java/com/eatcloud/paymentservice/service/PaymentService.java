@@ -45,7 +45,7 @@ public class PaymentService {
                 .orderId(orderId)
                 .customerId(customerId)
                 .pgProvider("TOSS")
-                .requestPayload("{}") // 실제로는 더 상세한 정보를 저장
+                .requestPayload("{}")
                 .redirectUrl(redirectUrl)
                 .status(PaymentRequestStatus.PENDING)
                 .timeoutAt(LocalDateTime.now().plusMinutes(PAYMENT_TIMEOUT_MINUTES))
@@ -177,10 +177,8 @@ public class PaymentService {
     public CompletableFuture<Void> schedulePaymentTimeout(UUID paymentRequestId) {
         return CompletableFuture.runAsync(() -> {
             try {
-                // 5분 대기
                 Thread.sleep(PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
-                
-                // 타임아웃 처리
+
                 updateExpiredPaymentRequest(paymentRequestId);
                 
             } catch (InterruptedException e) {
@@ -206,9 +204,6 @@ public class PaymentService {
                 });
     }
 
-    /**
-     * 결제 상태를 REFUNDED로 업데이트
-     */
     @Transactional
     public void updatePaymentStatusToRefunded(UUID orderId) {
         log.info("결제 상태를 REFUNDED로 업데이트: orderId={}", orderId);

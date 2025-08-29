@@ -50,10 +50,8 @@ public class CartService {
         validateAddItemRequest(request);
 
         try {
-            // 🛠️ 수정: getCart 대신 Redis에서 직접 조회
             List<CartItem> cartItems = getCartFromRedis(customerId);
 
-            // Cache Miss 시 빈 리스트로 시작
             if (cartItems.isEmpty()) {
                 cartItems = new ArrayList<>();
             }
@@ -109,12 +107,10 @@ public class CartService {
                 return cartItems;
             }
 
-            // Cache Miss 시 DB에서 조회
             log.debug("Cache miss, retrieving from database for customer: {}", customerId);
             cartItems = getCartFromDatabase(customerId);
 
             if (!cartItems.isEmpty()) {
-                // ��️ 수정: Redis에만 저장 (기존 메서드 사용)
                 saveCartToRedis(customerId, cartItems);
             }
 
@@ -133,7 +129,6 @@ public class CartService {
         try {
             List<CartItem> cartItems = getCartFromRedis(customerId);
 
-            // Cache Miss 시 DB에서 조회
             if (cartItems.isEmpty()) {
                 cartItems = getCartFromDatabase(customerId);
                 if (!cartItems.isEmpty()) {

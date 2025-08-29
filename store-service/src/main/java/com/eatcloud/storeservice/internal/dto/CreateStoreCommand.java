@@ -1,4 +1,3 @@
-// com.eatcloud.storeservice.internal.dto.CreateStoreCommand
 package com.eatcloud.storeservice.internal.dto;
 
 import lombok.*;
@@ -9,12 +8,12 @@ import java.util.UUID;
 @NoArgsConstructor @AllArgsConstructor
 @Builder
 public class CreateStoreCommand {
-    private UUID applicationId;     // 멱등키(권장)
-    private UUID managerId;         // 필수
+    private UUID applicationId;
+    private UUID managerId;
     private String storeName;
     private String storeAddress;
     private String storePhoneNumber;
-    private Integer storeCategoryId;        // null 허용 가능
+    private Integer storeCategoryId;
     private String description;
 
 

@@ -22,16 +22,9 @@ import com.eatcloud.autoresponse.error.ErrorCode;
 
 import jakarta.validation.ConstraintViolationException;
 
-/**
- * 전역 예외 처리기 (MSA 공통)
- * - 비즈니스 예외: ErrorCode 기반 표준 응답
- * - 검증 예외: 400 Bad Request + 필드 에러 목록
- * - 기타: 상황별 401/403/404/500 등
- */
 @RestControllerAdvice
 public class ExceptionHandler {
 
-	/** 비즈니스 예외 -> ErrorCode에 정의된 상태/메시지로 변환 */
 	@org.springframework.web.bind.annotation.ExceptionHandler(BusinessException.class)
 	public ResponseEntity<ApiResponse<Void>> handleBusiness(final BusinessException ex) {
 		final ErrorCode ec = ex.getErrorCode();
@@ -64,35 +57,30 @@ public class ExceptionHandler {
 			.body(ApiResponse.badRequest(ApiError.of(errors, null)));
 	}
 
-	/** 본문 파싱 실패(JSON 등) */
 	@org.springframework.web.bind.annotation.ExceptionHandler(HttpMessageNotReadableException.class)
 	public ResponseEntity<ApiResponse<ApiError>> handleNotReadable(final HttpMessageNotReadableException ex) {
 		return ResponseEntity.badRequest()
 			.body(ApiResponse.badRequest("요청 본문을 읽을 수 없습니다.", null));
 	}
 
-	/** 인가 실패 */
 	@org.springframework.web.bind.annotation.ExceptionHandler(AccessDeniedException.class)
 	public ResponseEntity<ApiResponse<ApiError>> handleAccessDenied(final AccessDeniedException ex) {
 		return ResponseEntity.status(HttpStatus.FORBIDDEN)
 			.body(ApiResponse.forbidden("권한이 없습니다."));
 	}
 
-	/** 조회 결과 없음 등 */
 	@org.springframework.web.bind.annotation.ExceptionHandler(NoSuchElementException.class)
 	public ResponseEntity<ApiResponse<ApiError>> handleNoSuchElement(final NoSuchElementException ex) {
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
 			.body(ApiResponse.notFound("일치하는 값이 없습니다."));
 	}
 
-	/** 최종 방어선 */
 	@org.springframework.web.bind.annotation.ExceptionHandler(Exception.class)
 	public ResponseEntity<ApiResponse<ApiError>> handleAny(final Exception ex) {
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 			.body(ApiResponse.internalError("서버 내부 오류가 발생했습니다."));
 	}
 
-	// ---- util ----
 	private ApiFieldError toFieldError(final FieldError fe) {
 		return ApiFieldError.of(fe.getField(), fe.getRejectedValue(), fe.getDefaultMessage());
 	}

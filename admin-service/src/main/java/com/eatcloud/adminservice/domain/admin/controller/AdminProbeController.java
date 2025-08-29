@@ -1,4 +1,3 @@
-// admin-service
 package com.eatcloud.adminservice.domain.admin.controller;
 
 import com.eatcloud.adminservice.external.store.StoreInternalPingClient;
@@ -7,7 +6,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-// admin-service / api/AdminProbeController.java
 @RestController
 @RequestMapping("/admin/_probe")
 @RequiredArgsConstructor

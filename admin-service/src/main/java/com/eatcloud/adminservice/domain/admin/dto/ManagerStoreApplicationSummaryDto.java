@@ -6,7 +6,6 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-/** Admin용: 신청서 목록 조회 시 표시할 요약 정보 DTO */
 @Getter
 @Setter
 @NoArgsConstructor

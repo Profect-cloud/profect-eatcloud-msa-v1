@@ -6,9 +6,6 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-/**
- * Admin용: 단일 신청서의 세부 정보를 담는 DTO
- */
 @Getter
 @Setter
 @NoArgsConstructor
@@ -20,7 +17,6 @@ public class ManagerStoreApplicationDetailDto {
 	@Schema(description = "신청 ID", example = "550e8400-e29b-41d4-a716-446655440000")
 	private UUID applicationId;
 
-	// Manager 신청 정보
 	@Schema(description = "매니저 이름", example = "홍길동")
 	private String managerName;
 
@@ -30,7 +26,6 @@ public class ManagerStoreApplicationDetailDto {
 	@Schema(description = "매니저 연락처", example = "010-1234-5678")
 	private String managerPhoneNumber;
 
-	// Store 신청 정보
 	@Schema(description = "스토어 이름", example = "우리동네피자")
 	private String storeName;
 
@@ -46,7 +41,6 @@ public class ManagerStoreApplicationDetailDto {
 	@Schema(description = "스토어 설명")
 	private String description;
 
-	// 심사 상태
 	@Schema(description = "신청 상태", example = "PENDING")
 	private String status;
 
@@ -56,7 +50,6 @@ public class ManagerStoreApplicationDetailDto {
 	@Schema(description = "심사 코멘트")
 	private String reviewComment;
 
-	// 시간 정보
 	@Schema(description = "신청 일시")
 	private LocalDateTime appliedAt;
 

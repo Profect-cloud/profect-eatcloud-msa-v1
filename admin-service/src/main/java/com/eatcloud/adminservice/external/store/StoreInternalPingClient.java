@@ -1,4 +1,3 @@
-// admin-service
 package com.eatcloud.adminservice.external.store;
 
 import lombok.RequiredArgsConstructor;

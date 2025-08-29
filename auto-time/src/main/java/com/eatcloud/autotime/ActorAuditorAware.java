@@ -7,7 +7,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-/** 감사 주체: SecurityContext → X-Actor-Id 헤더 → "system" */
 public class ActorAuditorAware implements AuditorAware<String> {
 	@Override
 	public Optional<String> getCurrentAuditor() {

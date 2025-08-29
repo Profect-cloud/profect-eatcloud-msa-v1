@@ -1,4 +1,3 @@
-// store-service / external/admin/AdminCategoryRestAdapter.java
 package com.eatcloud.storeservice.external.admin;
 
 import com.eatcloud.storeservice.external.admin.dto.CategoryDto;

@@ -40,7 +40,6 @@ public class GenericCategoryService {
 		return r;
 	}
 
-	// ---------- CREATE ----------
 	@Transactional
 	public CategoryDto create(String type, CategoryDto dto) {
 		BaseCategory entity = switch (type) {
@@ -77,7 +76,6 @@ public class GenericCategoryService {
 
 		StoreCategory storeToUse = storeFromMid;
 		if (d.getStoreCategoryId() != null) {
-			// 명시된 storeCategoryId가 mid의 상위와 다르면 에러
 			if (!d.getStoreCategoryId().equals(storeFromMid.getId())) {
 				throw new AdminException(AdminErrorCode.INVALID_INPUT);
 			}
@@ -85,21 +83,18 @@ public class GenericCategoryService {
 		var e = new MenuCategory();
 		fillBase(e, d);
 		e.setMidCategory(mid);
-		e.setStoreCategory(storeToUse); // denorm
+		e.setStoreCategory(storeToUse);
 		return e;
 	}
 
-	// ---------- UPDATE ----------
 	@Transactional
 	public CategoryDto update(String type, Integer id, CategoryDto dto) {
 		BaseCategoryRepository<BaseCategory> repository = repo(type);
 		BaseCategory entity = repository.findById(id)
 				.orElseThrow(() -> new AdminException(AdminErrorCode.CATEGORY_NOT_FOUND));
 
-		// 공통 필드 갱신
 		fillBase(entity, dto);
 
-		// 관계 변경 처리
 		switch (type) {
 			case "mid-categories" -> {
 				MidCategory mid = (MidCategory) entity;
@@ -133,14 +128,12 @@ public class GenericCategoryService {
 		return toDto(updated);
 	}
 
-	// ---------- DELETE ----------
 	@Transactional
 	public void delete(String type, Integer id) {
 		BaseCategoryRepository<BaseCategory> repository = repo(type);
 		BaseCategory entity = repository.findById(id)
 				.orElseThrow(() -> new AdminException(AdminErrorCode.CATEGORY_NOT_FOUND));
 
-		// 하위 존재 여부 체크 (소프트 규칙; DB FK로 막을 수도 있음)
 		switch (type) {
 			case "store-categories" -> {
 				if (midRepo.existsByStoreCategoryId(id)) {
@@ -157,7 +150,6 @@ public class GenericCategoryService {
 		repository.softDelete(entity,"admin");
 	}
 
-	// ---------- LIST ----------
 	public List<CategoryDto> list(String type) {
 		return repo(type)
 				.findAll(Sort.by("sortOrder").ascending().and(Sort.by("id").ascending()))
@@ -166,7 +158,6 @@ public class GenericCategoryService {
 				.toList();
 	}
 
-	// ---------- 공통 mapper ----------
 	private void fillBase(BaseCategory e, CategoryDto d) {
 		e.setCode(d.getCode());
 		e.setName(d.getDisplayName()); // DTO의 displayName -> 엔티티 name
