@@ -38,6 +38,7 @@ dependencies {
 	testImplementation 'com.h2database:h2'
 	implementation project(':auto-time')
 	implementation project(':auto-response')
+	implementation 'org.redisson:redisson-spring-boot-starter:3.27.1'
 
 }
 
