@@ -20,6 +20,7 @@ public class RestClientsConfig {
 
     // Admin 서비스 호출용
     @Bean(name = "adminRestClient")
+    @Qualifier("adminRestClient")
     public RestClient adminRestClient(
             @Value("${admin.service-id:admin-service}") String serviceId,
             RestClient.Builder builder
@@ -31,6 +32,7 @@ public class RestClientsConfig {
 
     // Orders 서비스 호출용
     @Bean(name = "ordersRestClient")
+    @Qualifier("ordersRestClient")
     public RestClient ordersRestClient(
             @Value("${orders.service-id:orders-service}") String serviceId,
             RestClient.Builder builder

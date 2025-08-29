@@ -54,7 +54,7 @@ public class AdminCategoryRestAdapter implements AdminCategoryPort {
     @Override
     public List<CategoryDto> listStoreCategories() {
         CategoryDto[] arr = adminClient.get()
-                .uri("/internal/categories/store")
+                .uri("/internal/admin/categories/store")
                 .retrieve()
                 .body(CategoryDto[].class);
         return arr == null ? List.of() : Arrays.asList(arr);
