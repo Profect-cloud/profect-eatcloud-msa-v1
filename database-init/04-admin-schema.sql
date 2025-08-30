@@ -1,6 +1,7 @@
 \c admin_db;
 
 
+
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE IF NOT EXISTS p_store_categories (
@@ -65,7 +66,7 @@ CREATE INDEX IF NOT EXISTS idx_menu_active_sort_in_mid
 CREATE TABLE IF NOT EXISTS p_admins (
   id           UUID PRIMARY KEY,
   name         VARCHAR(20) UNIQUE NOT NULL,
-  email        VARCHAR(255)       NOT NULL,
+  email        VARCHAR(255) UNIQUE NOT NULL,
   password     VARCHAR(255)       NOT NULL,
   phone_number VARCHAR(18),
   position     VARCHAR(50),

@@ -8,12 +8,13 @@ CREATE TABLE IF NOT EXISTS p_managers (
     phone_number VARCHAR(18),
     position     VARCHAR(50),
 
-    created_at   TIMESTAMP,
-    created_by   VARCHAR(50),
-    updated_at   TIMESTAMP,
-    updated_by   VARCHAR(50),
+    -- audit & soft-delete (auto-time BaseTimeEntity와 매핑)
+    created_at   TIMESTAMP    NOT NULL DEFAULT now(),
+    created_by   VARCHAR(100) NOT NULL,
+    updated_at   TIMESTAMP    NOT NULL DEFAULT now(),
+    updated_by   VARCHAR(100) NOT NULL,
     deleted_at   TIMESTAMP,
-    deleted_by   VARCHAR(50)
+    deleted_by   VARCHAR(100)
 );
 
 CREATE INDEX IF NOT EXISTS idx_p_managers_deleted_at ON p_managers(deleted_at);

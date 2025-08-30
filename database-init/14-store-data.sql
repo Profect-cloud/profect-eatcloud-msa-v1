@@ -1,7 +1,9 @@
 \c store_db;
 
+
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS postgis;
+
 
 INSERT INTO p_stores (
     store_id, application_id, manager_id,
@@ -321,12 +323,14 @@ VALUES
      FALSE, 35,
      now(),'system',now(),'system');
 
+
 INSERT INTO delivery_areas (area_id, area_name, created_at, created_by, updated_at, updated_by)
 VALUES
     (gen_random_uuid(), '종로구', now(),'system',now(),'system'),
     (gen_random_uuid(), '마포구', now(),'system',now(),'system'),
     (gen_random_uuid(), '강남구', now(),'system',now(),'system'),
     (gen_random_uuid(), '서초구', now(),'system',now(),'system');
+
 
 INSERT INTO p_store_delivery_areas (
     store_id, area_id, delivery_fee,
@@ -364,9 +368,11 @@ VALUES
      (SELECT area_id FROM delivery_areas WHERE area_name='종로구'), 2500,
      now(),'system',now(),'system');
 
+
 INSERT INTO p_ai_responses (ai_response_id, description, created_at, created_by, updated_at, updated_by)
 VALUES
     (gen_random_uuid(), '메뉴 설명 자동 생성 결과 샘플', now(),'system',now(),'system');
+
 
 INSERT INTO daily_store_sales (
     sale_date, store_id, order_count, total_amount,
@@ -454,6 +460,7 @@ VALUES
      (SELECT menu_id FROM p_menus WHERE menu_name='소고기 스테이크'),
      10, 250000, now(),'system',now(),'system');
 
+
 INSERT INTO menu_vectors (menu_name, tfidf_vector) VALUES
     ('비빔밥', '{"비빔밥": 1.0}'),
     ('김치찌개', '{"김치찌개": 1.0}'),
@@ -500,3 +507,4 @@ INSERT INTO menu_vectors (menu_name, tfidf_vector) VALUES
     ('소고기 파스타', '{"소고기": 0.7, "파스타": 0.7}'),
     ('소고기 스테이크 세트', '{"소고기": 0.5, "스테이크": 0.5, "세트": 0.5}'),
     ('소고기 소시지 세트', '{"소고기": 0.5, "소시지": 0.5, "세트": 0.5}');
+

@@ -130,3 +130,4 @@ FROM p_store_categories s
          LEFT JOIN p_admins a ON a.email = 'admin2@example.com'
 WHERE s.code = 'BUNSIK'
 ON CONFLICT DO NOTHING;
+

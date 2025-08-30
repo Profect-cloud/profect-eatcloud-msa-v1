@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS p_reviews (
     deleted_by VARCHAR(100)
     );
 
+-- 주문 상태 코드 테이블
 CREATE TABLE IF NOT EXISTS order_status_codes (
     code VARCHAR(30) PRIMARY KEY,
     display_name VARCHAR(50) NOT NULL,

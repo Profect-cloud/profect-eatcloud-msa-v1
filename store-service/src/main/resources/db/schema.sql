@@ -4,7 +4,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE IF NOT EXISTS p_stores (
   store_id         UUID PRIMARY KEY,
-  store_name       VARCHAR(200) NOT NULL,
+  store_name       VARCHAR(200) NOT NULL UNIQUE,
   store_address    VARCHAR(300),
   phone_number     VARCHAR(18),
   store_category_id INT NOT NULL,

@@ -17,6 +17,7 @@ repositories {
     mavenCentral()
 }
 
+// 루트 프로젝트는 bootJar 태스크 비활성화
 bootJar {
     enabled = false
 }
@@ -25,6 +26,7 @@ jar {
     enabled = true
 }
 
+// Spring Cloud BOM 버전 관리 (Spring Boot 3.5.3과 호환)
 ext {
     springCloudVersion = '2025.0.0'
 }
@@ -35,6 +37,7 @@ dependencyManagement {
     }
 }
 
+// 서브프로젝트 공통 설정
 subprojects {
     apply plugin: 'java'
     apply plugin: 'org.springframework.boot'
@@ -61,51 +64,19 @@ subprojects {
 
     dependencies {
         implementation 'org.springframework.boot:spring-boot-starter'
-        implementation 'org.springframework.boot:spring-boot-starter-validation'
-        implementation 'org.springframework.kafka:spring-kafka'
-        implementation 'org.springframework.boot:spring-boot-starter-actuator'
-        implementation 'org.springframework.boot:spring-boot-starter-security'
-        implementation 'org.springframework.boot:spring-boot-starter-web'
-        implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-        implementation 'org.springframework.boot:spring-boot-starter-test'
-        implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
-        implementation 'org.springframework.security:spring-security-crypto'
-        implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-        implementation 'io.micrometer:micrometer-registry-prometheus'
-        implementation 'org.springframework.boot:spring-boot-starter-webflux'
-        implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
-        implementation 'org.springframework.boot:spring-boot-starter-mail'
-        implementation 'org.springframework.boot:spring-boot-starter-websocket'
-        implementation 'org.springframework.boot:spring-boot-starter-quartz'
-        implementation 'org.springframework.security:spring-security-core'
-        implementation 'org.springframework:spring-messaging'
-        implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5'
-
-        implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
-        implementation 'io.jsonwebtoken:jjwt-impl:0.11.5'
-        implementation 'io.jsonwebtoken:jjwt-jackson:0.11.5'
-
-        implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
-        annotationProcessor 'com.querydsl:querydsl-apt:5.0.0:jakarta'
-        annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
-        annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
-
-        implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
-        implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
-        implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
-        implementation "org.springframework.cloud:spring-cloud-starter-loadbalancer"
-
         testImplementation 'org.springframework.boot:spring-boot-starter-test'
         testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-        compileOnly 'org.projectlombok:lombok'
-        annotationProcessor 'org.projectlombok:lombok'
-        runtimeOnly 'org.postgresql:postgresql'
-
     }
 
     tasks.named('test') {
         useJUnitPlatform()
     }
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {

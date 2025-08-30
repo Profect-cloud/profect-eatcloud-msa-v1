@@ -6,7 +6,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE IF NOT EXISTS p_stores (
   store_id         UUID PRIMARY KEY,
-  store_name       VARCHAR(200) NOT NULL,
+  store_name       VARCHAR(200) NOT NULL UNIQUE,
   store_address    VARCHAR(300),
   phone_number     VARCHAR(18),
   store_category_id INT NOT NULL,
@@ -21,9 +21,11 @@ CREATE TABLE IF NOT EXISTS p_stores (
   close_time       TIME NOT NULL,
   location         geography(Point, 4326),
 
+  -- ⭐ Ratings (denormalized)
   rating_sum       NUMERIC(10,2) NOT NULL DEFAULT 0,
   rating_count     INTEGER       NOT NULL DEFAULT 0,
   avg_rating       NUMERIC(3,2)  NOT NULL DEFAULT 0,
+
 
   created_at       TIMESTAMP     NOT NULL DEFAULT now(),
   created_by       VARCHAR(100)  NOT NULL,
@@ -46,6 +48,7 @@ CREATE TABLE IF NOT EXISTS p_menus (
   description        TEXT,
   is_available       BOOLEAN NOT NULL DEFAULT TRUE,
   image_url          VARCHAR(500),
+
 
   is_unlimited       BOOLEAN NOT NULL DEFAULT FALSE,
   stock_quantity     INTEGER NOT NULL DEFAULT 0,
@@ -98,6 +101,7 @@ CREATE TABLE IF NOT EXISTS p_store_delivery_areas (
   PRIMARY KEY (store_id, area_id)
 );
 
+
 CREATE TABLE IF NOT EXISTS daily_store_sales (
   sale_date    DATE NOT NULL,
   store_id     UUID NOT NULL,
@@ -130,6 +134,7 @@ CREATE TABLE IF NOT EXISTS daily_menu_sales (
 );
 CREATE INDEX IF NOT EXISTS idx_daily_menu_sales_store_date
   ON daily_menu_sales (store_id, sale_date);
+
 
 CREATE TABLE IF NOT EXISTS p_ai_responses (
   ai_response_id UUID PRIMARY KEY,
