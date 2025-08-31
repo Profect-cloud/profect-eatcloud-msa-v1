@@ -1,42 +1,31 @@
 package com.eatcloud.orderservice.config;
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpHeaders;
-
-import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
-import io.swagger.v3.oas.models.security.SecurityRequirement;
-import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import java.util.List;
 
 @Configuration
 public class SwaggerConfig {
+    
     @Bean
     public OpenAPI customOpenAPI() {
-        Components components = new Components()
-                .addSecuritySchemes("bearerAuth",
-                        new SecurityScheme()
-                                .type(SecurityScheme.Type.HTTP)
-                                .scheme("bearer")
-                                .bearerFormat("JWT")
-                                .in(SecurityScheme.In.HEADER)
-                                .name(HttpHeaders.AUTHORIZATION)
-                );
-
-        SecurityRequirement securityRequirement = new SecurityRequirement()
-                .addList("bearerAuth");
-
+        Server gatewayServer = new Server()
+                .url("/order-service")
+                .description("Order Service via API Gateway");
+                
+        Server localServer = new Server()
+                .url("/")
+                .description("Direct Order Service");
+        
         return new OpenAPI()
-                .components(components)
-                .addSecurityItem(securityRequirement)
-                .info(info());
-    }
-
-    private Info info() {
-        return new Info()
-                .title("Order Service API Documentation")
-                .description("")
-                .version("1.1");
+                .servers(List.of(gatewayServer, localServer))
+                .info(new Info()
+                        .title("Order Service API")
+                        .version("1.0")
+                        .description("Order Service API Documentation"));
     }
 }

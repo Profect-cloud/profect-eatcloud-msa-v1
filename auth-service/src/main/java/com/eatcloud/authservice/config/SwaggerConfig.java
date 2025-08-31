@@ -1,41 +1,31 @@
 package com.eatcloud.authservice.config;
 
-import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import io.swagger.v3.oas.models.security.SecurityRequirement;
-import io.swagger.v3.oas.models.info.Info;
-import org.springframework.http.HttpHeaders;
+
+import java.util.List;
 
 @Configuration
 public class SwaggerConfig {
+    
     @Bean
     public OpenAPI customOpenAPI() {
-        Components components = new Components()
-                .addSecuritySchemes("bearerAuth",
-                        new SecurityScheme()
-                                .type(SecurityScheme.Type.HTTP)
-                                .scheme("bearer")
-                                .bearerFormat("JWT")
-                                .in(SecurityScheme.In.HEADER)
-                                .name(HttpHeaders.AUTHORIZATION)
-                );
-
-        SecurityRequirement securityRequirement = new SecurityRequirement()
-                .addList("bearerAuth");
-
+        Server gatewayServer = new Server()
+                .url("/auth-service")
+                .description("Auth Service via API Gateway");
+                
+        Server localServer = new Server()
+                .url("/")
+                .description("Direct Auth Service");
+        
         return new OpenAPI()
-                .components(components)
-                .addSecurityItem(securityRequirement)
-                .info(info());
-    }
-
-    private Info info() {
-        return new Info()
-                .title("Auth Service API Documentation")
-                .description("")
-                .version("1.1");
+                .servers(List.of(gatewayServer, localServer))
+                .info(new Info()
+                        .title("Auth Service API")
+                        .version("1.0")
+                        .description("Auth Service API Documentation"));
     }
 }
