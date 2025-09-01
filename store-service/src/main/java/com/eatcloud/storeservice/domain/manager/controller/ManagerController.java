@@ -1,14 +1,14 @@
 package com.eatcloud.storeservice.domain.manager.controller;
 
-import com.eatcloud.storeservice.domain.manager.dto.StoreRegisterRequestDto;
 import com.eatcloud.storeservice.domain.manager.message.ManagerResponseMessage;
 import com.eatcloud.storeservice.domain.manager.service.ManagerService;
 import com.eatcloud.storeservice.domain.menu.dto.MenuRequestDto;
 import com.eatcloud.storeservice.domain.menu.dto.MenuResponseDto;
+import com.eatcloud.storeservice.domain.menu.dto.MenuUpdateRequestDto;
 import com.eatcloud.storeservice.domain.menu.entity.Menu;
 import com.eatcloud.storeservice.domain.store.dto.AiDescriptionRequestDto;
 import com.eatcloud.storeservice.domain.store.dto.AiDescriptionResponseDto;
-import com.eatcloud.storeservice.domain.store.dto.StoreRequestDto;
+import com.eatcloud.storeservice.domain.store.dto.StoreUpdateRequestDto;
 import com.eatcloud.storeservice.domain.store.service.AiDescriptionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -16,7 +16,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import com.eatcloud.autoresponse.core.ApiResponse;
 
@@ -46,7 +45,7 @@ public class ManagerController {
     public ApiResponse<MenuResponseDto> updateMenu(
             @PathVariable UUID storeId,
             @PathVariable UUID menuId,
-            @RequestBody @Valid MenuRequestDto dto
+            @RequestBody @Valid MenuUpdateRequestDto dto
     ) {
         Menu updated = managerService.updateMenu(storeId, menuId, dto);
         return ApiResponse.success(MenuResponseDto.from(updated));
@@ -75,9 +74,12 @@ public class ManagerController {
     @PutMapping("/stores/{storeId}")
     @ResponseStatus(HttpStatus.OK)
     public ApiResponse<ManagerResponseMessage> updateStore(@PathVariable UUID storeId,
-                                                           @RequestBody @Valid StoreRequestDto dto) {
+                                                           @RequestBody @Valid StoreUpdateRequestDto dto) {
         managerService.updateStore(storeId, dto);
         return ApiResponse.success(ManagerResponseMessage.STORE_UPDATE_SUCCESS);
     }
+
+    // 가게 생성
+    // 가게 삭제
 
 }

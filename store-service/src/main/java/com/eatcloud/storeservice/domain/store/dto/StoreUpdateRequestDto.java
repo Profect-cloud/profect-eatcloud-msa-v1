@@ -8,7 +8,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
-public class StoreRequestDto {
+public class StoreUpdateRequestDto {
     private String storeName;
     private String storeAddress;
     private String phoneNumber;
