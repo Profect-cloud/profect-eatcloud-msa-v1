@@ -10,7 +10,6 @@ CREATE TABLE IF NOT EXISTS p_stores (
   store_address    VARCHAR(300),
   phone_number     VARCHAR(18),
   store_category_id INT NOT NULL,
-  application_id   UUID UNIQUE,
   manager_id       UUID,
   min_cost         INTEGER NOT NULL DEFAULT 0,
   description      TEXT,

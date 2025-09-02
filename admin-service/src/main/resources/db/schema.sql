@@ -1,5 +1,5 @@
 
-
+SET search_path TO public;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE IF NOT EXISTS p_store_categories (
@@ -76,40 +76,40 @@ CREATE TABLE IF NOT EXISTS p_admins (
   deleted_by   VARCHAR(100)
 );
 
-CREATE TABLE IF NOT EXISTS p_manager_store_applications (
-    application_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+-- CREATE TABLE IF NOT EXISTS p_manager_store_applications (
+--     application_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--
+--     manager_name         VARCHAR(20)  NOT NULL,
+--     manager_email        VARCHAR(255) NOT NULL,
+--     manager_password     VARCHAR(255) NOT NULL,
+--     manager_phone_number VARCHAR(18),
+--
+--     store_name           VARCHAR(200) NOT NULL,
+--     store_address        VARCHAR(300),
+--     store_phone_number   VARCHAR(18),
+--     store_category_id    INT NOT NULL REFERENCES p_store_categories(id),
+--     description          TEXT,
+--
+--     status               VARCHAR(20)  NOT NULL DEFAULT 'PENDING',  -- PENDING|APPROVED|REJECTED
+--     reviewer_admin_id    UUID REFERENCES p_admins(id) ON DELETE SET NULL,
+--     review_comment       TEXT,
+--
+--     created_at           TIMESTAMP    NOT NULL DEFAULT now(),
+--     created_by           VARCHAR(100) NOT NULL DEFAULT 'system',
+--     updated_at           TIMESTAMP    NOT NULL DEFAULT now(),
+--     updated_by           VARCHAR(100) NOT NULL DEFAULT 'system',
+--     deleted_at           TIMESTAMP,
+--     deleted_by           VARCHAR(100)
+-- );
 
-    manager_name         VARCHAR(20)  NOT NULL,
-    manager_email        VARCHAR(255) NOT NULL,
-    manager_password     VARCHAR(255) NOT NULL,
-    manager_phone_number VARCHAR(18),
-
-    store_name           VARCHAR(200) NOT NULL,
-    store_address        VARCHAR(300),
-    store_phone_number   VARCHAR(18),
-    store_category_id    INT NOT NULL REFERENCES p_store_categories(id),
-    description          TEXT,
-
-    status               VARCHAR(20)  NOT NULL DEFAULT 'PENDING',  -- PENDING|APPROVED|REJECTED
-    reviewer_admin_id    UUID REFERENCES p_admins(id) ON DELETE SET NULL,
-    review_comment       TEXT,
-
-    created_at           TIMESTAMP    NOT NULL DEFAULT now(),
-    created_by           VARCHAR(100) NOT NULL DEFAULT 'system',
-    updated_at           TIMESTAMP    NOT NULL DEFAULT now(),
-    updated_by           VARCHAR(100) NOT NULL DEFAULT 'system',
-    deleted_at           TIMESTAMP,
-    deleted_by           VARCHAR(100)
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS ux_mgrstore_manager_email
-    ON p_manager_store_applications (manager_email);
-
-CREATE INDEX IF NOT EXISTS idx_mgrstore_status
-    ON p_manager_store_applications (status);
-
-CREATE INDEX IF NOT EXISTS idx_mgrstore_store_category
-    ON p_manager_store_applications (store_category_id);
-
-CREATE INDEX IF NOT EXISTS idx_mgrstore_reviewer
-    ON p_manager_store_applications (reviewer_admin_id);
+-- CREATE UNIQUE INDEX IF NOT EXISTS ux_mgrstore_manager_email
+--     ON p_manager_store_applications (manager_email);
+--
+-- CREATE INDEX IF NOT EXISTS idx_mgrstore_status
+--     ON p_manager_store_applications (status);
+--
+-- CREATE INDEX IF NOT EXISTS idx_mgrstore_store_category
+--     ON p_manager_store_applications (store_category_id);
+--
+-- CREATE INDEX IF NOT EXISTS idx_mgrstore_reviewer
+--     ON p_manager_store_applications (reviewer_admin_id);

@@ -57,9 +57,9 @@ public class AdminService {
 		return storePort.getById(storeId);
 	}
 
-//	public void deleteStore(UUID storeId) {
-//		storePort.softDeleteById(storeId);
-//	}
+	public void deleteStore(UUID storeId) {
+		storePort.softDeleteById(storeId);
+	}
 
 	public UserLoginDto findByEmail(String email) {
 		Admin admin = adminRepository.findByEmail(email)

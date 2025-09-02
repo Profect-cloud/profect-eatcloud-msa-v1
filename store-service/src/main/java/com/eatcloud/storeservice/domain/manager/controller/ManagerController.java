@@ -17,6 +17,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import com.eatcloud.autoresponse.core.ApiResponse;
 
@@ -82,7 +83,7 @@ public class ManagerController {
 
     // 가게 생성
     @Operation(summary = "2-2. 가게 생성")
-    @PutMapping("/stores")
+    @PostMapping("/stores")
     @ResponseStatus(HttpStatus.OK)
     public ApiResponse<ManagerResponseMessage> createStore(@PathVariable UUID storeId,
                                                            @RequestBody @Valid StoreCreateRequestDto dto) {
@@ -90,5 +91,13 @@ public class ManagerController {
         return ApiResponse.success(ManagerResponseMessage.STORE_REGISTRATION_SUCCESS);
     }
     // 가게 삭제
+    @Operation(summary = "2-3. 가게 삭제")
+    @DeleteMapping("/stores/{storeId}")
+    @ResponseStatus(HttpStatus.OK)
+    public ApiResponse<ManagerResponseMessage> deleteStore(@PathVariable UUID storeId
+                                                           ) {
+        managerService.deleteStore(storeId);
+        return ApiResponse.success(ManagerResponseMessage.STORE_CLOSURE_SUCCESS);
+    }
 
 }

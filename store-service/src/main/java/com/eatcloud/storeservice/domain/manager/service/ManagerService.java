@@ -184,9 +184,9 @@ public class ManagerService {
     }
 
     @Transactional
-    public void deleteStore(UUID ownerId, UUID storeId) {
-        Store store = storeRepository.findByStoreIdAndOwnerId(storeId, ownerId)
-                .orElseThrow(() -> new StoreException(StoreErrorCode.STORE_NOT_FOUND));
+    public void deleteStore(UUID storeId) {
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new StoreException(StoreErrorCode.STORE_ALREADY_CLOSED));
 
         storeRepository.softDeleteById(store.getStoreId(), "MANAGER");
     }

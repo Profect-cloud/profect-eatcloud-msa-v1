@@ -1,5 +1,5 @@
 CREATE SCHEMA IF NOT EXISTS customer;
-SET search_path TO customer;
+SET search_path TO public;
 
 DROP TABLE IF EXISTS point_reservations;
 DROP TABLE IF EXISTS p_addresses;
