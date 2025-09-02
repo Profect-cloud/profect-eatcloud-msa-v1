@@ -8,6 +8,7 @@ import com.eatcloud.storeservice.domain.menu.dto.MenuUpdateRequestDto;
 import com.eatcloud.storeservice.domain.menu.entity.Menu;
 import com.eatcloud.storeservice.domain.store.dto.AiDescriptionRequestDto;
 import com.eatcloud.storeservice.domain.store.dto.AiDescriptionResponseDto;
+import com.eatcloud.storeservice.domain.store.dto.StoreCreateRequestDto;
 import com.eatcloud.storeservice.domain.store.dto.StoreUpdateRequestDto;
 import com.eatcloud.storeservice.domain.store.service.AiDescriptionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -80,6 +81,14 @@ public class ManagerController {
     }
 
     // 가게 생성
+    @Operation(summary = "2-2. 가게 생성")
+    @PutMapping("/stores")
+    @ResponseStatus(HttpStatus.OK)
+    public ApiResponse<ManagerResponseMessage> createStore(@PathVariable UUID storeId,
+                                                           @RequestBody @Valid StoreCreateRequestDto dto) {
+        managerService.createStore(storeId, dto);
+        return ApiResponse.success(ManagerResponseMessage.STORE_REGISTRATION_SUCCESS);
+    }
     // 가게 삭제
 
 }
