@@ -1,12 +1,14 @@
 package com.eatcloud.storeservice.domain.manager.service;
 
 import com.eatcloud.storeservice.domain.menu.dto.MenuRequestDto;
+import com.eatcloud.storeservice.domain.menu.dto.MenuUpdateRequestDto;
 import com.eatcloud.storeservice.domain.menu.entity.Menu;
 import com.eatcloud.storeservice.domain.menu.exception.MenuErrorCode;
 import com.eatcloud.storeservice.domain.menu.exception.MenuException;
 import com.eatcloud.storeservice.domain.menu.repository.MenuRepository;
 import com.eatcloud.storeservice.domain.menuai.service.TFIDFService;
-import com.eatcloud.storeservice.domain.store.dto.StoreRequestDto;
+import com.eatcloud.storeservice.domain.store.dto.StoreCreateRequestDto;
+import com.eatcloud.storeservice.domain.store.dto.StoreUpdateRequestDto;
 import com.eatcloud.storeservice.domain.store.entity.Store;
 import com.eatcloud.storeservice.domain.store.exception.StoreErrorCode;
 import com.eatcloud.storeservice.domain.store.exception.StoreException;
@@ -35,6 +37,7 @@ public class ManagerService {
         this.tfidfService = tfidfService;
     }
 
+    // 메뉴 생성
     @Transactional
     public Menu createMenu(UUID storeId, MenuRequestDto dto) {
         Store store = storeRepository.findById(storeId)
@@ -82,45 +85,49 @@ public class ManagerService {
         return savedMenu;
     }
 
-    public Menu updateMenu(UUID storeId, UUID menuId, MenuRequestDto dto) {
+    @Transactional
+    public Menu updateMenu(UUID storeId, UUID menuId, MenuUpdateRequestDto dto) {
+        // 1) 메뉴 존재 확인
         Menu menu = menuRepository.findById(menuId)
                 .orElseThrow(() -> new MenuException(MenuErrorCode.MENU_NOT_FOUND));
 
+        // 2) 이 메뉴가 해당 store 소속인지 확인 (권한/무결성)
+        if (!menu.getStore().getStoreId().equals(storeId)) {
+            throw new StoreException(StoreErrorCode.STORE_NOT_FOUND); // 또는 FORBIDDEN 성격의 에러
+        }
+
+        // 3) 필수 검증
         if (dto.getMenuName() == null || dto.getMenuName().trim().isEmpty()) {
             throw new MenuException(MenuErrorCode.MENU_NAME_REQUIRED);
         }
-
         if (dto.getPrice() == null || dto.getPrice().compareTo(BigDecimal.ZERO) < 0) {
             throw new MenuException(MenuErrorCode.INVALID_MENU_PRICE);
         }
 
-        if (dto.getMenuNum() != menu.getMenuNum()) {
+        // 4) menuNum을 업데이트 허용한다면 중복 체크 (허용 안 하면 이 블록 삭제)
+        if (dto.getMenuNum() != null && !dto.getMenuNum().equals(menu.getMenuNum())) {
             boolean exists = menuRepository.existsByStoreAndMenuNum(menu.getStore(), dto.getMenuNum());
             if (exists) {
                 throw new MenuException(MenuErrorCode.DUPLICATE_MENU_NUM);
             }
         }
 
-        menu.setMenuNum(dto.getMenuNum());
-        menu.setMenuName(dto.getMenuName());
-        menu.setMenuCategoryCode(dto.getMenuCategoryCode());
-        menu.setPrice(dto.getPrice());
-        menu.setDescription(dto.getDescription());
-        menu.setIsAvailable(dto.getIsAvailable() != null ? dto.getIsAvailable() : true);
-        menu.setImageUrl(dto.getImageUrl());
+        // 5) 엔티티 도메인 메서드로 변경
+        menu.updateMenu(dto);
 
+        // 6) 더티체킹으로 자동 flush → save 굳이 필요 없음 (있어도 무방)
         Menu updatedMenu = menuRepository.save(menu);
-        log.info("메뉴 수정 완료: {}", updatedMenu.getMenuName());
 
+        // 7) 커밋 이후 벡터 재생성 (간단하게 비동기 유지)
         CompletableFuture.runAsync(() -> {
             try {
-                tfidfService.generateAndSaveMenuVector(updatedMenu);
+                tfidfService.generateAndSaveMenuVector(menu);
             } catch (Exception e) {
-                log.error("메뉴 벡터 재생성 실패: {}", updatedMenu.getMenuName(), e);
+                log.error("메뉴 벡터 재생성 실패: {}", menu.getMenuName(), e);
             }
         });
 
-        return updatedMenu;
+        return menu;
     }
 
     @Transactional
@@ -132,6 +139,7 @@ public class ManagerService {
         menuRepository.softDeleteById(menuId,"매니저");
         log.info("메뉴 삭제 완료: {}", menuName);
 
+        // 벡터도 함께 삭제 (비동기 처리)
         CompletableFuture.runAsync(() -> {
             try {
                 tfidfService.deleteMenuVector(menuName);
@@ -141,18 +149,46 @@ public class ManagerService {
         });
     }
 
-    public void updateStore(UUID storeId, StoreRequestDto dto) {
+    public void updateStore(UUID storeId, StoreUpdateRequestDto dto) {
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new StoreException(StoreErrorCode.STORE_NOT_FOUND));
 
-        if (dto.getStoreName() != null) store.setStoreName(dto.getStoreName());
-        if (dto.getStoreAddress() != null) store.setStoreAddress(dto.getStoreAddress());
-        if (dto.getPhoneNumber() != null) store.setPhoneNumber(dto.getPhoneNumber());
-        if (dto.getMinCost() != null) store.setMinCost(dto.getMinCost());
-        if (dto.getDescription() != null) store.setDescription(dto.getDescription());
-        if (dto.getStoreLat() != null) store.setStoreLat(dto.getStoreLat());
-        if (dto.getStoreLon() != null) store.setStoreLon(dto.getStoreLon());
-        if (dto.getOpenTime() != null) store.setOpenTime(dto.getOpenTime());
-        if (dto.getCloseTime() != null) store.setCloseTime(dto.getCloseTime());
     }
+
+    // 가게 생성
+
+    @Transactional
+    public Store createStore(UUID managerId, StoreCreateRequestDto dto) {
+        // 가게명 중복 체크
+        if (storeRepository.existsByManagerIdAndStoreName((managerId), dto.getStoreName())) {
+            throw new StoreException(StoreErrorCode.STORE_ALREADY_REGISTERED);
+        }
+
+        // 빌더로 Store 생성
+        Store store = Store.builder()
+                .managerId(managerId)
+                .storeName(dto.getStoreName())
+                .storeAddress(dto.getStoreAddress())
+                .phoneNumber(dto.getPhoneNumber())
+                .storeCategoryId(dto.getStoreCategoryId())
+                .minCost(dto.getMinCost())
+                .description(dto.getDescription())
+                .openStatus(false)         // 신규 등록은 기본 false
+                .openTime(null)            // 필요시 null 허용
+                .closeTime(null)
+                .storeLat(dto.getStoreLat())
+                .storeLon(dto.getStoreLon())
+                .build();
+
+        return storeRepository.save(store);
+    }
+
+    @Transactional
+    public void deleteStore(UUID ownerId, UUID storeId) {
+        Store store = storeRepository.findByStoreIdAndOwnerId(storeId, ownerId)
+                .orElseThrow(() -> new StoreException(StoreErrorCode.STORE_NOT_FOUND));
+
+        storeRepository.softDeleteById(store.getStoreId(), "MANAGER");
+    }
+
 }

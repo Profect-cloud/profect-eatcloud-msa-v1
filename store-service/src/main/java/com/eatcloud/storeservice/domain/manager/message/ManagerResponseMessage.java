@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum ManagerResponseMessage {
 
-    STORE_REGISTRATION_REQUEST_SUCCESS("가게 등록 요청이 완료되었습니다."),
+    STORE_REGISTRATION_SUCCESS("가게 등록이 완료되었습니다."),
     STORE_CLOSURE_REQUEST_SUCCESS("가게 폐업 요청이 완료되었습니다."),
     STORE_UPDATE_SUCCESS("가게 정보 수정이 완료되었습니다."),
     MENU_CREATE_SUCCESS("메뉴 등록이 완료되었습니다."),

@@ -1,5 +1,6 @@
 package com.eatcloud.storeservice.global.queryDSL;
 
+
 import com.eatcloud.storeservice.domain.menu.entity.QDailyMenuSales;
 import com.eatcloud.storeservice.domain.menu.entity.QMenu;
 import com.eatcloud.storeservice.domain.store.entity.QDailyStoreSales;

@@ -14,7 +14,6 @@ import java.util.UUID;
 @SQLRestriction("deleted_at is null")
 @Table(name = "daily_menu_sales")
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
