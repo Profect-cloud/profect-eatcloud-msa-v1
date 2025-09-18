@@ -57,7 +57,7 @@ profect-eatcloud-msa-v1/
     └── docker-compose.yml              # 메인 Docker Compose
 ```
 ### 인프라 아키텍처
-[git_readme_img-001](https://github.com/user-attachments/assets/6a54861e-5e0a-4362-9e86-2d3cb5fb90dd)
+![git\_readme\_img-001](https://github.com/user-attachments/assets/6a54861e-5e0a-4362-9e86-2d3cb5fb90dd)
 
 ### CI/CD 아키텍처
-[git_readme_img-002](https://github.com/user-attachments/assets/0fd5bc17-5b0a-4166-9c5b-1a1f09ef4809)
+![git\_readme\_img-002](https://github.com/user-attachments/assets/0fd5bc17-5b0a-4166-9c5b-1a1f09ef4809)
