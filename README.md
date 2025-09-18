@@ -25,7 +25,9 @@ Goorm 프로펙트 클라우드 엔지니어링 과정 3기 – 2차 프로젝�
 - passport 구조 내부 토큰 인증/인가
 - Redis 활용 장바구니 데이터 저장 배치 처리
 - TF-IDF 유사도 활용 사용자 검색 기반 메뉴 추천
-
+- GitHub Actions로 CICD 구축
+- AWS ECS on Fargate 서버리스방식으로 운영환경 구축
+- Prometheus, Loki, Grafana로 모니터링 
 
 ## 🏗 아키텍처
 ### 디렉토리 구조
