@@ -15,7 +15,7 @@ Goorm 프로펙트 클라우드 엔지니어링 과정 3기 – 2차 프로젝�
 - [문창주](https://github.com/munstate)
 
 ## 🛠 기술 스택
-`Java` `Spring Boot` `Spring Security` `PostgreSQL` `PostGIS` `Redis` `QueryDSL` `Spring Cloud` `Netflix Eureka` `Rest Template``AWS` `GitAction` `ECS` `Docker` `MSK` `RDS`
+`Java` `Spring Boot` `Spring Security` `PostgreSQL` `PostGIS` `Redis` `QueryDSL` `Spring Cloud` `Netflix Eureka` `Rest Template` `AWS` `GitAction` `ECS` `Docker` `MSK` `RDS`
 
 ## ✨ 주요 기능
 - 각 도메인별로 마이크로서비스 분리
